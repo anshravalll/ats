@@ -1,26 +1,169 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Custom variant for dark mode */
+@custom-variant dark (&:is(.dark *));
+
+/* CSS-First Theme Configuration */
+@theme {
+  /* Custom animations */
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  
+  /* Custom fonts */
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Your existing color system */
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.147 0.004 49.25);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.147 0.004 49.25);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.147 0.004 49.25);
+  --color-primary: oklch(0.216 0.006 56.043);
+  --color-primary-foreground: oklch(0.985 0.001 106.423);
+  --color-secondary: oklch(0.97 0.001 106.424);
+  --color-secondary-foreground: oklch(0.216 0.006 56.043);
+  --color-muted: oklch(0.97 0.001 106.424);
+  --color-muted-foreground: oklch(0.553 0.013 58.071);
+  --color-accent: oklch(0.97 0.001 106.424);
+  --color-accent-foreground: oklch(0.216 0.006 56.043);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-border: oklch(0.923 0.003 48.717);
+  --color-input: oklch(0.923 0.003 48.717);
+  --color-ring: oklch(0.709 0.01 56.259);
+  --color-chart-1: oklch(0.646 0.222 41.116);
+  --color-chart-2: oklch(0.6 0.118 184.704);
+  --color-chart-3: oklch(0.398 0.07 227.392);
+  --color-chart-4: oklch(0.828 0.189 84.429);
+  --color-chart-5: oklch(0.769 0.188 70.08);
+  --color-sidebar: oklch(0.985 0.001 106.423);
+  --color-sidebar-foreground: oklch(0.147 0.004 49.25);
+  --color-sidebar-primary: oklch(0.216 0.006 56.043);
+  --color-sidebar-primary-foreground: oklch(0.985 0.001 106.423);
+  --color-sidebar-accent: oklch(0.97 0.001 106.424);
+  --color-sidebar-accent-foreground: oklch(0.216 0.006 56.043);
+  --color-sidebar-border: oklch(0.923 0.003 48.717);
+  --color-sidebar-ring: oklch(0.709 0.01 56.259);
+  
+  /* Custom border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Dark mode colors */
+@layer theme {
+  .dark {
+    --color-background: oklch(0.147 0.004 49.25);
+    --color-foreground: oklch(0.985 0.001 106.423);
+    --color-card: oklch(0.216 0.006 56.043);
+    --color-card-foreground: oklch(0.985 0.001 106.423);
+    --color-popover: oklch(0.216 0.006 56.043);
+    --color-popover-foreground: oklch(0.985 0.001 106.423);
+    --color-primary: oklch(0.923 0.003 48.717);
+    --color-primary-foreground: oklch(0.216 0.006 56.043);
+    --color-secondary: oklch(0.268 0.007 34.298);
+    --color-secondary-foreground: oklch(0.985 0.001 106.423);
+    --color-muted: oklch(0.268 0.007 34.298);
+    --color-muted-foreground: oklch(0.709 0.01 56.259);
+    --color-accent: oklch(0.268 0.007 34.298);
+    --color-accent-foreground: oklch(0.985 0.001 106.423);
+    --color-destructive: oklch(0.704 0.191 22.216);
+    --color-border: oklch(1 0 0 / 10%);
+    --color-input: oklch(1 0 0 / 15%);
+    --color-ring: oklch(0.553 0.013 58.071);
+    --color-chart-1: oklch(0.488 0.243 264.376);
+    --color-chart-2: oklch(0.696 0.17 162.48);
+    --color-chart-3: oklch(0.769 0.188 70.08);
+    --color-chart-4: oklch(0.627 0.265 303.9);
+    --color-chart-5: oklch(0.645 0.246 16.439);
+    --color-sidebar: oklch(0.216 0.006 56.043);
+    --color-sidebar-foreground: oklch(0.985 0.001 106.423);
+    --color-sidebar-primary: oklch(0.488 0.243 264.376);
+    --color-sidebar-primary-foreground: oklch(0.985 0.001 106.423);
+    --color-sidebar-accent: oklch(0.268 0.007 34.298);
+    --color-sidebar-accent-foreground: oklch(0.985 0.001 106.423);
+    --color-sidebar-border: oklch(1 0 0 / 10%);
+    --color-sidebar-ring: oklch(0.553 0.013 58.071);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans;
+  }
+}
+
+/* Component styles */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2;
+  }
+  
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2;
+  }
+  
+  .form-control {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .search-loading {
+    @apply absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin;
+  }
+  
+  .animate-fade-in {
+    animation: var(--animate-fade-in);
+  }
+  
+  .animate-slide-up {
+    animation: var(--animate-slide-up);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground;
 }
