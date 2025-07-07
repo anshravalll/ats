@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useChat } from 'ai/react';
-import { Sparkles, MessageCircle, Maximize2, X, Settings } from 'lucide-react';
+import { Sparkles, MessageCircle, Maximize2, X } from 'lucide-react';
 import { MessageInput } from '@/components/ui/message-input';
-import { TypingIndicator } from '@/components/ui/typing-indicator';
 import { Button } from '@/components/ui/button';
 import { useCandidates } from '../../../lib/context/CandidateContext';
 import { cn } from '@/lib/utils';
@@ -14,12 +13,11 @@ const StickyAIInterface = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isManuallyHidden, setIsManuallyHidden] = useState(false);
-  const [showSettings, setShowSettings] = useState(false); // Settings panel state
-  const [useMockAPI, setUseMockAPI] = useState(false); // Mock API toggle state
+  const [useMockAPI, setUseMockAPI] = useState(false);
   
   const { filteredCandidates, applyAIFilters, candidates } = useCandidates();
 
-  // Initialize API settings from environment and localStorage
+  // Initialize API settings
   useEffect(() => {
     const envUseMock = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
     const localUseMock = typeof window !== 'undefined' 
@@ -29,7 +27,6 @@ const StickyAIInterface = () => {
     setUseMockAPI(envUseMock || localUseMock);
   }, []);
 
-  // Toggle mock API and save to localStorage
   const toggleMockAPI = useCallback(() => {
     const newUseMock = !useMockAPI;
     setUseMockAPI(newUseMock);
@@ -39,7 +36,6 @@ const StickyAIInterface = () => {
     }
   }, [useMockAPI]);
 
-  // Determine API endpoint based on mock setting
   const apiEndpoint = useMockAPI ? '/api/chat/candidates-mock' : '/api/chat/candidates';
 
   const { 
@@ -51,9 +47,12 @@ const StickyAIInterface = () => {
     stop,
     append
   } = useChat({
-    api: apiEndpoint, // Dynamic API endpoint
+    // api: apiEndpoint, // Keep commented as requested
+    onError: (error) => {
+      console.log("AI API Error:", error);
+    },
     onFinish: (message) => {
-      // Parse AI response for candidate filtering
+      // This processes AI response and filters candidates directly
       try {
         const jsonMatch = message.content.match(/\{[^}]*"candidateIds"[^}]*\}/);
         if (jsonMatch) {
@@ -68,7 +67,29 @@ const StickyAIInterface = () => {
     }
   });
 
-  // Updated sticky scroll detection with manual hide logic
+  // Windows + Enter keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Check for Windows key (Meta key on Mac, Windows key on PC) + Enter
+      if ((event.metaKey || event.key === 'Meta') && event.key === 'Enter') {
+        event.preventDefault();
+        if (input.trim() && !isLoading) {
+          // Trigger form submission
+          const form = document.querySelector('form');
+          if (form) {
+            form.requestSubmit();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [input, isLoading]);
+
+  // Sticky scroll detection
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -100,56 +121,20 @@ const StickyAIInterface = () => {
     setIsManuallyHidden(true);
     setIsSticky(false);
     setIsExpanded(false);
-    setShowSettings(false); // Close settings when closing the interface
   }, []);
 
-  // Settings Panel Component
-  const SettingsPanel = () => (
-    showSettings && (
-      <div className="absolute top-full right-0 mt-2 bg-card border border-border rounded-lg shadow-lg p-4 z-50 min-w-56">
-        <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
-          <Settings className="w-4 h-4" />
-          API Settings
-        </h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Use Mock API</span>
-            <button
-              onClick={toggleMockAPI}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                useMockAPI ? 'bg-primary' : 'bg-muted'
-              }`}
-            >
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${
-                useMockAPI ? 'translate-x-5' : 'translate-x-0'
-              }`} />
-            </button>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {useMockAPI ? (
-              <div className="space-y-1">
-                <p className="text-yellow-600 font-medium">🧪 Using mock responses for testing</p>
-                <p>Try queries like "React developers in Germany"</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-green-600 font-medium">🚀 Using real OpenAI API</p>
-                <p>Requires valid API key and credits</p>
-              </div>
-            )}
-          </div>
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              Current endpoint: 
-              <code className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">
-                {apiEndpoint}
-              </code>
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  );
+  const handleSuggestionClick = useCallback((suggestion) => {
+    if (!isLoading) {
+      append({ role: 'user', content: suggestion });
+    }
+  }, [append, isLoading]);
+
+  // Mock suggestions
+  const mockSuggestions = [
+    "Find React developers in Germany with 5+ years experience",
+    "Show senior candidates available immediately", 
+    "Which candidates know both Python and AWS?"
+  ];
 
   return (
     <>
@@ -161,19 +146,19 @@ const StickyAIInterface = () => {
           : "relative w-full max-w-4xl mx-auto"
       )}>
         
-        {/* Subtle Glow Effect */}
+        {/* Glow Effect */}
         <div className={cn(
           "absolute inset-0 bg-gradient-to-r from-primary/20 via-chart-1/30 to-primary/20 rounded-2xl blur-xl transition-all duration-700",
           isSticky ? "opacity-80 scale-105" : "opacity-40 scale-100"
         )} />
         
-        {/* Main Minimal Interface */}
+        {/* Main Interface */}
         <div className={cn(
           "relative bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-lg transition-all duration-500",
           isSticky ? "shadow-primary/20 border-primary/30" : "shadow-md"
         )}>
           
-          {/* Compact Header */}
+          {/* Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-gradient-to-br from-primary to-chart-1 rounded-lg flex items-center justify-center">
@@ -183,22 +168,28 @@ const StickyAIInterface = () => {
               <span className="text-xs text-muted-foreground">
                 {filteredCandidates.length} candidates
               </span>
-              {/* Mock API Indicator */}
               {useMockAPI && (
                 <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 px-2 py-0.5 rounded-full font-medium">
                   MOCK
                 </span>
               )}
+              {/* Loading indicator when collapsed */}
+              {isLoading && !isExpanded && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-75" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-150" />
+                </div>
+              )}
             </div>
             
-            <div className="flex items-center gap-1 relative">
+            <div className="flex items-center gap-1">
               {messages.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleExpand}
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                  title="View chat history"
                 >
                   <MessageCircle className="w-4 h-4" />
                 </Button>
@@ -208,107 +199,84 @@ const StickyAIInterface = () => {
                 size="sm" 
                 onClick={handleExpand}
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                title="Expand chat interface"
               >
                 <Maximize2 className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-                className={cn(
-                  "h-7 w-7 p-0 text-muted-foreground hover:text-foreground",
-                  showSettings && "bg-muted text-foreground"
-                )}
-                title="API settings"
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={handleClose}
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                title="Close AI interface"
               >
                 <X className="w-4 h-4" />
               </Button>
-              
-              {/* Settings Panel */}
-              <SettingsPanel />
             </div>
           </div>
 
-          {/* Minimal Input Section */}
+          {/* Input Section - Using MessageInput Properly */}
           <div className="p-4">
-            <div className="relative">
+            <form onSubmit={handleSubmit}>
               <MessageInput
-                placeholder={`Ask AI to find candidates... ${useMockAPI ? '(Mock Mode - Try "React developers in Germany")' : ''}`}
                 value={input}
                 onChange={handleInputChange}
-                onSubmit={handleSubmit}
-                className="min-h-[44px] bg-background/60 border-border/60 focus:border-primary/60 text-sm pr-12"
-                disabled={isLoading}
+                placeholder={`Ask AI to find candidates... ${useMockAPI ? '(Use buttons below)' : ''}`}
+                className={cn(
+                  "min-h-[44px] bg-background/60 border-border/60 focus:border-primary/60 text-sm",
+                  isLoading && "text-muted-foreground bg-muted/30" // Gray out during processing
+                )}
+                // Key MessageInput props
+                submitOnEnter={true}
+                stop={stop}
+                isGenerating={isLoading}
+                enableInterrupt={true}
+                // Optional: Add voice input if you have transcribeAudio function
+                // transcribeAudio={transcribeAudio}
               />
-              
-              {/* Loading Indicator */}
-              {isLoading && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <TypingIndicator />
-                </div>
-              )}
-            </div>
+            </form>
 
-            {/* Quick Status */}
-            {(isLoading || input) && (
-              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                      AI is searching...
-                      {useMockAPI && <span className="text-yellow-600">(Mock)</span>}
-                    </>
-                  ) : (
-                    'Press Enter to search'
-                  )}
-                </span>
-                {filteredCandidates.length !== candidates.length && (
-                  <span className="text-primary font-medium">
-                    Filtered from {candidates.length} total
+            {/* Mock Suggestions */}
+            {useMockAPI && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {mockSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors border border-yellow-200 dark:border-yellow-800 disabled:opacity-50"
+                    disabled={isLoading}
+                    title={suggestion}
+                  >
+                    {suggestion.length > 30 ? suggestion.substring(0, 30) + '...' : suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Status Info */}
+            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+              <span>
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    AI is processing...
+                    {useMockAPI && <span className="text-yellow-600">(Mock)</span>}
+                  </span>
+                ) : (
+                  <span>
+                    Press <span className="font-mono bg-muted px-1 rounded">⊞ + Enter</span> or <span className="font-mono bg-muted px-1 rounded">Enter</span> to send
+                    {useMockAPI && <span className="ml-2 text-yellow-600">or click buttons above</span>}
                   </span>
                 )}
-              </div>
-            )}
-
-            {/* Mock Mode Quick Suggestions */}
-            {useMockAPI && messages.length === 0 && (
-              <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <p className="text-xs text-yellow-700 dark:text-yellow-300 font-medium mb-1">
-                  🧪 Mock Mode - Try these test queries:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {[
-                    "React developers in Germany",
-                    "Senior candidates", 
-                    "Python AWS developers"
-                  ].map((query, index) => (
-                    <button
-                      key={index}
-                      onClick={() => append({ role: 'user', content: query })}
-                      className="text-xs bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors"
-                    >
-                      {query}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+              </span>
+              {filteredCandidates.length !== candidates.length && (
+                <span className="text-primary font-medium">
+                  Filtered from {candidates.length} total
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Spacer when sticky */}
       {isSticky && <div className="h-20" />}
 
       {/* Expanded Chat Interface */}
@@ -322,6 +290,9 @@ const StickyAIInterface = () => {
           stop={stop}
           append={append}
           onCollapse={handleCollapse}
+          useMockAPI={useMockAPI}
+          suggestions={mockSuggestions}
+          toggleMockAPI={toggleMockAPI}
         />
       )}
     </>
