@@ -8,77 +8,153 @@ import { Button } from '@/components/ui/button';
 import { useCandidates } from '../../../lib/context/CandidateContext';
 import { cn } from '@/lib/utils';
 import ExpandedChatInterface from './ExpandedChatInterface';
+import { filterCandidates, rankCandidates } from '@/lib/mcp-tools';
 
 const StickyAIInterface = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isManuallyHidden, setIsManuallyHidden] = useState(false);
   const [useMockAPI, setUseMockAPI] = useState(false);
-  
+  const [csvSent, setCsvSent] = useState(false);
+
   const { filteredCandidates, applyAIFilters, candidates } = useCandidates();
 
   // Initialize API settings
   useEffect(() => {
     const envUseMock = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
-    const localUseMock = typeof window !== 'undefined' 
+    const localUseMock = typeof window !== 'undefined'
       ? localStorage.getItem('ats-use-mock-api') === 'true'
       : false;
-    
     setUseMockAPI(envUseMock || localUseMock);
   }, []);
 
   const toggleMockAPI = useCallback(() => {
     const newUseMock = !useMockAPI;
     setUseMockAPI(newUseMock);
-    
     if (typeof window !== 'undefined') {
       localStorage.setItem('ats-use-mock-api', newUseMock.toString());
     }
   }, [useMockAPI]);
 
-  const apiEndpoint = useMockAPI ? '/api/chat/candidates-mock' : '/api/chat/candidates';
+  const apiEndpoint = useMockAPI ? '/api/chat/candidates-mock' : '/api/chat/think';
 
   const { 
     messages, 
     input, 
     handleInputChange, 
     handleSubmit, 
-    isLoading,
-    stop,
-    append
+    isLoading, 
+    stop, 
+    append, 
+    setMessages 
   } = useChat({
-    // api: apiEndpoint, // Keep commented as requested
+    api: apiEndpoint,
     onError: (error) => {
-      console.log("AI API Error:", error);
+      console.log('AI API Error:', error);
     },
     onFinish: (message) => {
-      // This processes AI response and filters candidates directly
       try {
-        const jsonMatch = message.content.match(/\{[^}]*"candidateIds"[^}]*\}/);
-        if (jsonMatch) {
-          const result = JSON.parse(jsonMatch[0]);
-          if (result.candidateIds && Array.isArray(result.candidateIds)) {
-            applyAIFilters(result.candidateIds, input);
-          }
+        console.log('Raw AI Response:', message.content);
+    
+        // JSON extraction logic...
+        const jsonMatch = message.content.match(/\{(?:[^{}]|{[^{}]*})*\}/);
+        if (!jsonMatch) {
+          console.warn('No JSON found in AI response');
+          return;
         }
-      } catch (e) {
-        console.error('Error parsing AI response:', e);
+    
+        const aiResponse = JSON.parse(jsonMatch[0]);
+        const filterPlan = aiResponse.filter || { include: [], exclude: [] };
+        const rankPlan = aiResponse.rank || { primary: 'years_experience', tie_breakers: [] };
+    
+        console.log('🔍 Filter plan:', filterPlan);
+        console.log('📊 Rank plan:', rankPlan);
+    
+        // ACT 1: Filter candidates
+        const filteredCandidatesResult = filterCandidates(filterPlan, candidates);
+        const filteredIds = filteredCandidatesResult.map(c => c.id);
+    
+        console.log('✅ ACT 1 Complete - Filtered candidates:');
+        console.log('Filtered count:', filteredCandidatesResult.length);
+        console.log('Filtered IDs:', filteredIds);
+    
+        // ACT 2: Rank candidates
+        const rankedCandidates = rankCandidates(filteredIds, rankPlan, candidates);
+    
+        // 🔍 NEW DEBUG LOGS FOR RANKING
+        console.log('✅ ACT 2 Complete - Ranked candidates:');
+        console.log('Ranked count:', rankedCandidates.length);
+        
+        // Show ranked candidates with their ranking field values
+        console.log('📋 RANKED ORDER WITH VALUES:');
+        rankedCandidates.slice(0, 5).forEach((candidate, index) => {
+          console.log(`${index + 1}. ${candidate.name || candidate.id} - ${rankPlan.primary}: ${candidate[rankPlan.primary]}`);
+        });
+    
+        // Show the exact IDs in ranked order
+        const rankedIds = rankedCandidates.map(c => c.id);
+        console.log('🎯 RANKED IDs (this is what should go to UI):', rankedIds);
+        console.log('🆚 FILTERED IDs (unranked):', filteredIds);
+        console.log('📊 IDs ORDER COMPARISON:');
+        console.log('Are they the same order?', JSON.stringify(rankedIds) === JSON.stringify(filteredIds));
+    
+        // Apply results to UI - THIS IS THE KEY ISSUE
+        console.log('🚨 CALLING applyAIFilters with:', filteredIds); // Current wrong way
+        applyAIFilters(rankedIds, input);
+    
+        // 🔍 WHAT SHOULD BE CALLED INSTEAD:
+        console.log('✅ SHOULD CALL applyAIFilters with:', rankedIds);
+    
+      } catch (error) {
+        console.error('Processing error:', error);
       }
+        
+        // Hide assistant messages
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.role === 'assistant' 
+              ? { ...msg, hidden: true } 
+              : msg
+          )
+        );
+      }
+    });
+  
+  // Enhanced submit handler that includes CSV data on first request
+  const enhancedHandleSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    if (!csvSent && candidates.length > 0) {
+      console.log('📤 Sending CSV data with first request');
+      append({
+        role: 'user',
+        content: input,
+        data: {
+          candidates: JSON.stringify(candidates),
+          fields: Object.keys(candidates[0] || {}).join(', ')
+        }
+      });
+      setCsvSent(true);
+    } else {
+      handleSubmit(e);
     }
-  });
+  }, [input, isLoading, candidates, csvSent, append, handleSubmit]);
+
+  // Reset CSV sent flag when candidates change or component resets
+  useEffect(() => {
+    if (candidates.length === 0) {
+      setCsvSent(false);
+    }
+  }, [candidates]);
 
   // Windows + Enter keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Check for Windows key (Meta key on Mac, Windows key on PC) + Enter
       if ((event.metaKey || event.key === 'Meta') && event.key === 'Enter') {
         event.preventDefault();
         if (input.trim() && !isLoading) {
-          // Trigger form submission
-          const form = document.querySelector('form');
-          if (form) {
-            form.requestSubmit();
-          }
+          enhancedHandleSubmit(event);
         }
       }
     };
@@ -87,14 +163,14 @@ const StickyAIInterface = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [input, isLoading]);
+  }, [input, isLoading, enhancedHandleSubmit]);
 
   // Sticky scroll detection
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const shouldBeSticky = scrollTop > 250;
-      
+
       if (isManuallyHidden) {
         if (scrollTop <= 100) {
           setIsManuallyHidden(false);
@@ -121,6 +197,7 @@ const StickyAIInterface = () => {
     setIsManuallyHidden(true);
     setIsSticky(false);
     setIsExpanded(false);
+    setCsvSent(false);
   }, []);
 
   const handleSuggestionClick = useCallback((suggestion) => {
@@ -129,10 +206,9 @@ const StickyAIInterface = () => {
     }
   }, [append, isLoading]);
 
-  // Mock suggestions
   const mockSuggestions = [
     "Find React developers in Germany with 5+ years experience",
-    "Show senior candidates available immediately", 
+    "Show senior candidates available immediately",
     "Which candidates know both Python and AWS?"
   ];
 
@@ -141,23 +217,21 @@ const StickyAIInterface = () => {
       {/* Minimal Sticky AI Bar */}
       <div className={cn(
         "transition-all duration-500 ease-out",
-        isSticky 
-          ? "fixed top-4 left-1/2 transform -translate-x-1/2 z-40 w-[90%] max-w-2xl" 
+        isSticky
+          ? "fixed top-4 left-1/2 transform -translate-x-1/2 z-40 w-[90%] max-w-2xl"
           : "relative w-full max-w-4xl mx-auto"
       )}>
-        
         {/* Glow Effect */}
         <div className={cn(
           "absolute inset-0 bg-gradient-to-r from-primary/20 via-chart-1/30 to-primary/20 rounded-2xl blur-xl transition-all duration-700",
           isSticky ? "opacity-80 scale-105" : "opacity-40 scale-100"
         )} />
-        
+
         {/* Main Interface */}
         <div className={cn(
           "relative bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-lg transition-all duration-500",
           isSticky ? "shadow-primary/20 border-primary/30" : "shadow-md"
         )}>
-          
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
             <div className="flex items-center gap-2">
@@ -173,7 +247,6 @@ const StickyAIInterface = () => {
                   MOCK
                 </span>
               )}
-              {/* Loading indicator when collapsed */}
               {isLoading && !isExpanded && (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
@@ -182,7 +255,7 @@ const StickyAIInterface = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
                 <Button
@@ -196,7 +269,7 @@ const StickyAIInterface = () => {
               )}
               <Button
                 variant="ghost"
-                size="sm" 
+                size="sm"
                 onClick={handleExpand}
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
               >
@@ -213,24 +286,21 @@ const StickyAIInterface = () => {
             </div>
           </div>
 
-          {/* Input Section - Using MessageInput Properly */}
+          {/* Input Section */}
           <div className="p-4">
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={enhancedHandleSubmit}>
               <MessageInput
                 value={input}
                 onChange={handleInputChange}
                 placeholder={`Ask AI to find candidates... ${useMockAPI ? '(Use buttons below)' : ''}`}
                 className={cn(
                   "min-h-[44px] bg-background/60 border-border/60 focus:border-primary/60 text-sm",
-                  isLoading && "text-muted-foreground bg-muted/30" // Gray out during processing
+                  isLoading && "text-muted-foreground bg-muted/30"
                 )}
-                // Key MessageInput props
                 submitOnEnter={true}
                 stop={stop}
                 isGenerating={isLoading}
                 enableInterrupt={true}
-                // Optional: Add voice input if you have transcribeAudio function
-                // transcribeAudio={transcribeAudio}
               />
             </form>
 
@@ -285,7 +355,7 @@ const StickyAIInterface = () => {
           messages={messages}
           input={input}
           handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
+          handleSubmit={enhancedHandleSubmit}
           isLoading={isLoading}
           stop={stop}
           append={append}

@@ -210,15 +210,16 @@ export const CandidateProvider = ({ children }) => {
         console.warn('Invalid candidate IDs provided to applyAIFilters');
         return;
       }
+    
+      // Preserve the order by mapping candidateIds to candidates
+      const aiFilteredCandidates = candidateIds.map(id => 
+        state.candidates.find(candidate => candidate.id === id)
+      ).filter(Boolean);
       
-      const aiFilteredCandidates = state.candidates.filter(candidate => 
-        candidateIds.includes(candidate.id)
-      );
-      
-      dispatch({ 
-        type: 'AI_FILTER_APPLY', 
+      dispatch({
+        type: 'AI_FILTER_APPLY',
         payload: aiFilteredCandidates,
-        query 
+        query
       });
     }, [state.candidates]),
 
