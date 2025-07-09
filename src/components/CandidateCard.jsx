@@ -7,6 +7,17 @@ import { motion } from "framer-motion";
 const CandidateCard = ({ candidate }) => {
   const { setSelectedCandidate } = useCandidates();
 
+  // Helper to determine notice period text
+  const getNoticePeriodText = () => {
+    if (
+      typeof candidate.notice_period_weeks === "number" &&
+      candidate.notice_period_weeks > 0
+    ) {
+      return `${candidate.notice_period_weeks} weeks notice`;
+    }
+    return "available";
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 60 }}
@@ -59,12 +70,13 @@ const CandidateCard = ({ candidate }) => {
         </div>
         <div
           className={`text-xs px-2 py-1 rounded-full font-medium ${
-            candidate.availability === "Available"
-              ? "bg-chart-1/10 text-chart-1 border border-chart-1/20"
-              : "bg-chart-4/10 text-chart-4 border border-chart-4/20"
+            typeof candidate.notice_period_weeks === "number" &&
+            candidate.notice_period_weeks > 0
+              ? "bg-chart-4/10 text-chart-4 border border-chart-4/20"
+              : "bg-chart-1/10 text-chart-1 border border-chart-1/20"
           }`}
         >
-          {candidate.availability}
+          {getNoticePeriodText()}
         </div>
       </div>
     </motion.div>
