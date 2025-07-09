@@ -1,101 +1,101 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useReducer, useCallback } from 'react';
-import { loadCSVFile, transformCandidateData } from '../data/csvLoader';
-import { 
-  filterBySearchTerm, 
-  filterByLocation, 
-  filterByExperience, 
+import { createContext, useContext, useReducer, useCallback } from "react";
+import { loadCSVFile, transformCandidateData } from "../data/csvLoader";
+import {
+  filterBySearchTerm,
+  filterByLocation,
+  filterByExperience,
   sortCandidates,
-  getUniqueLocations 
-} from '../data/searchHelpers';
+  getUniqueLocations,
+} from "../data/searchHelpers";
 
 /**
  * Candidate state reducer
  */
 const candidateReducer = (state, action) => {
   switch (action.type) {
-    case 'LOAD_START':
+    case "LOAD_START":
       return {
         ...state,
         isLoading: true,
-        error: null
+        error: null,
       };
 
-    case 'LOAD_SUCCESS':
+    case "LOAD_SUCCESS":
       return {
         ...state,
         candidates: action.payload,
         filteredCandidates: action.payload,
         isLoading: false,
-        error: null
+        error: null,
       };
 
-    case 'LOAD_ERROR':
+    case "LOAD_ERROR":
       return {
         ...state,
         isLoading: false,
-        error: action.payload
+        error: action.payload,
       };
 
-    case 'SEARCH_START':
+    case "SEARCH_START":
       return {
         ...state,
-        isSearching: true
+        isSearching: true,
       };
 
-    case 'SEARCH_COMPLETE':
-      return {
-        ...state,
-        filteredCandidates: action.payload,
-        isSearching: false
-      };
-
-    case 'AI_FILTER_APPLY':
+    case "SEARCH_COMPLETE":
       return {
         ...state,
         filteredCandidates: action.payload,
-        lastAIQuery: action.query || state.lastAIQuery
+        isSearching: false,
       };
 
-    case 'SET_SEARCH_TERM':
+    case "AI_FILTER_APPLY":
       return {
         ...state,
-        searchTerm: action.payload
+        filteredCandidates: action.payload,
+        lastAIQuery: action.query || state.lastAIQuery,
       };
 
-    case 'SET_LOCATION_FILTER':
+    case "SET_SEARCH_TERM":
       return {
         ...state,
-        locationFilter: action.payload
+        searchTerm: action.payload,
       };
 
-    case 'SET_EXPERIENCE_FILTER':
+    case "SET_LOCATION_FILTER":
       return {
         ...state,
-        experienceFilter: action.payload
+        locationFilter: action.payload,
       };
 
-    case 'SET_SORT_BY':
+    case "SET_EXPERIENCE_FILTER":
       return {
         ...state,
-        sortBy: action.payload
+        experienceFilter: action.payload,
       };
 
-    case 'SET_SELECTED_CANDIDATE':
+    case "SET_SORT_BY":
       return {
         ...state,
-        selectedCandidate: action.payload
+        sortBy: action.payload,
       };
 
-    case 'CLEAR_FILTERS':
+    case "SET_SELECTED_CANDIDATE":
       return {
         ...state,
-        searchTerm: '',
-        locationFilter: '',
-        experienceFilter: '',
-        sortBy: 'name',
-        filteredCandidates: state.candidates
+        selectedCandidate: action.payload,
+      };
+
+    case "CLEAR_FILTERS":
+      return {
+        ...state,
+        searchTerm: "",
+        locationFilter: "",
+        experienceFilter: "",
+        sortBy: "name",
+        filteredCandidates: state.candidates,
       };
 
     default:
@@ -109,15 +109,15 @@ const candidateReducer = (state, action) => {
 const initialState = {
   candidates: [],
   filteredCandidates: [],
-  searchTerm: '',
-  locationFilter: '',
-  experienceFilter: '',
-  sortBy: 'name',
+  searchTerm: "",
+  locationFilter: "",
+  experienceFilter: "",
+  sortBy: "name",
   selectedCandidate: null,
   isLoading: true,
   isSearching: false,
   error: null,
-  lastAIQuery: null
+  lastAIQuery: null,
 };
 
 /**
@@ -129,38 +129,39 @@ const CandidateContext = createContext(undefined);
  * Async action helpers
  */
 export const loadCandidates = async (dispatch) => {
-  dispatch({ type: 'LOAD_START' });
-  
+  dispatch({ type: "LOAD_START" });
+
   try {
-    const rawData = await loadCSVFile('/candidates.csv');
+    const rawData = await loadCSVFile("/candidates.csv");
     const transformedData = transformCandidateData(rawData);
-    
-    dispatch({ 
-      type: 'LOAD_SUCCESS', 
-      payload: transformedData 
+
+    dispatch({
+      type: "LOAD_SUCCESS",
+      payload: transformedData,
     });
   } catch (error) {
-    dispatch({ 
-      type: 'LOAD_ERROR', 
-      payload: error.message 
+    dispatch({
+      type: "LOAD_ERROR",
+      payload: error.message,
     });
   }
 };
 
 export const applyFilters = (dispatch, state) => {
-  dispatch({ type: 'SEARCH_START' });
-  
+  dispatch({ type: "SEARCH_START" });
+
   setTimeout(() => {
-    const { candidates, searchTerm, locationFilter, experienceFilter, sortBy } = state;
-    
+    const { candidates, searchTerm, locationFilter, experienceFilter, sortBy } =
+      state;
+
     let filtered = filterBySearchTerm(candidates, searchTerm);
     filtered = filterByLocation(filtered, locationFilter);
     filtered = filterByExperience(filtered, experienceFilter);
     filtered = sortCandidates(filtered, sortBy);
-    
-    dispatch({ 
-      type: 'SEARCH_COMPLETE', 
-      payload: filtered 
+
+    dispatch({
+      type: "SEARCH_COMPLETE",
+      payload: filtered,
     });
   }, 200);
 };
@@ -176,59 +177,86 @@ export const CandidateProvider = ({ children }) => {
       loadCandidates(dispatch);
     }, []),
 
-    setSearchTerm: useCallback((term) => {
-      dispatch({ type: 'SET_SEARCH_TERM', payload: term });
-      setTimeout(() => applyFilters(dispatch, { ...state, searchTerm: term }), 0);
-    }, [state]),
+    setSearchTerm: useCallback(
+      (term) => {
+        dispatch({ type: "SET_SEARCH_TERM", payload: term });
+        setTimeout(
+          () => applyFilters(dispatch, { ...state, searchTerm: term }),
+          0,
+        );
+      },
+      [state],
+    ),
 
-    setLocationFilter: useCallback((location) => {
-      dispatch({ type: 'SET_LOCATION_FILTER', payload: location });
-      setTimeout(() => applyFilters(dispatch, { ...state, locationFilter: location }), 0);
-    }, [state]),
+    setLocationFilter: useCallback(
+      (location) => {
+        dispatch({ type: "SET_LOCATION_FILTER", payload: location });
+        setTimeout(
+          () => applyFilters(dispatch, { ...state, locationFilter: location }),
+          0,
+        );
+      },
+      [state],
+    ),
 
-    setExperienceFilter: useCallback((experience) => {
-      dispatch({ type: 'SET_EXPERIENCE_FILTER', payload: experience });
-      setTimeout(() => applyFilters(dispatch, { ...state, experienceFilter: experience }), 0);
-    }, [state]),
+    setExperienceFilter: useCallback(
+      (experience) => {
+        dispatch({ type: "SET_EXPERIENCE_FILTER", payload: experience });
+        setTimeout(
+          () =>
+            applyFilters(dispatch, { ...state, experienceFilter: experience }),
+          0,
+        );
+      },
+      [state],
+    ),
 
-    setSortBy: useCallback((sortBy) => {
-      dispatch({ type: 'SET_SORT_BY', payload: sortBy });
-      setTimeout(() => applyFilters(dispatch, { ...state, sortBy }), 0);
-    }, [state]),
+    setSortBy: useCallback(
+      (sortBy) => {
+        dispatch({ type: "SET_SORT_BY", payload: sortBy });
+        setTimeout(() => applyFilters(dispatch, { ...state, sortBy }), 0);
+      },
+      [state],
+    ),
 
     setSelectedCandidate: useCallback((candidate) => {
-      dispatch({ type: 'SET_SELECTED_CANDIDATE', payload: candidate });
+      dispatch({ type: "SET_SELECTED_CANDIDATE", payload: candidate });
     }, []),
 
     clearFilters: useCallback(() => {
-      dispatch({ type: 'CLEAR_FILTERS' });
+      dispatch({ type: "CLEAR_FILTERS" });
     }, []),
 
     // AI-specific actions
-    applyAIFilters: useCallback((candidateIds, query = null) => {
-      if (!candidateIds || !Array.isArray(candidateIds)) {
-        console.warn('Invalid candidate IDs provided to applyAIFilters');
-        return;
-      }
-    
-      // Preserve the order by mapping candidateIds to candidates
-      const aiFilteredCandidates = candidateIds.map(id => 
-        state.candidates.find(candidate => candidate.id === id)
-      ).filter(Boolean);
-      
-      dispatch({
-        type: 'AI_FILTER_APPLY',
-        payload: aiFilteredCandidates,
-        query
-      });
-    }, [state.candidates]),
+    applyAIFilters: useCallback(
+      (candidateIds, query = null) => {
+        if (!candidateIds || !Array.isArray(candidateIds)) {
+          console.warn("Invalid candidate IDs provided to applyAIFilters");
+          return;
+        }
+
+        // Preserve the order by mapping candidateIds to candidates
+        const aiFilteredCandidates = candidateIds
+          .map((id) =>
+            state.candidates.find((candidate) => candidate.id === id),
+          )
+          .filter(Boolean);
+
+        dispatch({
+          type: "AI_FILTER_APPLY",
+          payload: aiFilteredCandidates,
+          query,
+        });
+      },
+      [state.candidates],
+    ),
 
     resetToAllCandidates: useCallback(() => {
-      dispatch({ 
-        type: 'AI_FILTER_APPLY', 
-        payload: state.candidates 
+      dispatch({
+        type: "AI_FILTER_APPLY",
+        payload: state.candidates,
       });
-    }, [state.candidates])
+    }, [state.candidates]),
   };
 
   const computedValues = {
@@ -242,13 +270,13 @@ export const CandidateProvider = ({ children }) => {
 
     getFilteredCount: useCallback(() => {
       return state.filteredCandidates.length;
-    }, [state.filteredCandidates.length])
+    }, [state.filteredCandidates.length]),
   };
 
   const value = {
     ...state,
     ...actions,
-    ...computedValues
+    ...computedValues,
   };
 
   return (
@@ -263,10 +291,10 @@ export const CandidateProvider = ({ children }) => {
  */
 export const useCandidates = () => {
   const context = useContext(CandidateContext);
-  
+
   if (context === undefined) {
-    throw new Error('useCandidates must be used within a CandidateProvider');
+    throw new Error("useCandidates must be used within a CandidateProvider");
   }
-  
+
   return context;
 };

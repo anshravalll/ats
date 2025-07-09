@@ -42,6 +42,7 @@
     "@testing-library/user-event": "^14.6.1",
     "jest": "^30.0.4",
     "jest-environment-jsdom": "^30.0.4",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5"
   }

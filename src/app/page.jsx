@@ -1,32 +1,37 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { CandidateProvider, useCandidates } from '../../lib/context/CandidateContext';
-import StickyAIInterface from '../components/AISearch/StickyAIInterface';
-import CandidateCard from '../components/CandidateCard';
-import CandidateModal from '../components/CandidateModal';
+import { useEffect, useState } from "react";
+import {
+  CandidateProvider,
+  useCandidates,
+} from "../../lib/context/CandidateContext";
+import StickyAIInterface from "../components/AISearch/StickyAIInterface";
+import CandidateCard from "../components/CandidateCard";
+import CandidateModal from "../components/CandidateModal";
 
 const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     // Check localStorage and system preference on mount
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('theme');
-      const systemPrefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const shouldBeDark = stored === 'dark' || (!stored && systemPrefers);
-      
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("theme");
+      const systemPrefers = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      const shouldBeDark = stored === "dark" || (!stored && systemPrefers);
+
       setIsDark(shouldBeDark);
-      document.documentElement.classList.toggle('dark', shouldBeDark);
+      document.documentElement.classList.toggle("dark", shouldBeDark);
     }
   }, []);
 
   const toggleTheme = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const newTheme = !isDark;
       setIsDark(newTheme);
-      document.documentElement.classList.toggle('dark', newTheme);
-      localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+      document.documentElement.classList.toggle("dark", newTheme);
+      localStorage.setItem("theme", newTheme ? "dark" : "light");
     }
   };
 
@@ -34,9 +39,9 @@ const ThemeToggle = () => {
     <button
       onClick={toggleTheme}
       className="btn btn-outline"
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
     >
-      {isDark ? '☀️' : '🌙'}
+      {isDark ? "☀️" : "🌙"}
     </button>
   );
 };
@@ -45,8 +50,12 @@ const LoadingState = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <div className="text-center">
       <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      <h2 className="text-2xl font-semibold text-foreground mb-2">Loading candidates...</h2>
-      <p className="text-muted-foreground">Please wait while we fetch the candidate data.</p>
+      <h2 className="text-2xl font-semibold text-foreground mb-2">
+        Loading candidates...
+      </h2>
+      <p className="text-muted-foreground">
+        Please wait while we fetch the candidate data.
+      </p>
     </div>
   </div>
 );
@@ -55,7 +64,9 @@ const ErrorState = ({ error, onRetry }) => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <div className="text-center max-w-md">
       <div className="text-destructive text-6xl mb-4">⚠️</div>
-      <h2 className="text-2xl font-semibold text-foreground mb-2">Error loading candidates</h2>
+      <h2 className="text-2xl font-semibold text-foreground mb-2">
+        Error loading candidates
+      </h2>
       <p className="text-muted-foreground mb-4">{error}</p>
       <button onClick={onRetry} className="btn btn-primary">
         Retry
@@ -66,32 +77,31 @@ const ErrorState = ({ error, onRetry }) => (
 
 const EmptyState = ({ hasFilters = false }) => (
   <div className="text-center py-16">
-    <div className="text-6xl mb-4">
-      {hasFilters ? '🔍' : '🤖'}
-    </div>
+    <div className="text-6xl mb-4">{hasFilters ? "🔍" : "🤖"}</div>
     <h3 className="text-2xl font-semibold text-foreground mb-2">
-      {hasFilters ? 'No candidates match your AI search' : 'Use AI to find candidates'}
+      {hasFilters
+        ? "No candidates match your AI search"
+        : "Use AI to find candidates"}
     </h3>
     <p className="text-muted-foreground">
-      {hasFilters 
-        ? 'Try refining your search or ask the AI differently.'
-        : 'Type in the AI search bar above to find specific candidates using natural language.'
-      }
+      {hasFilters
+        ? "Try refining your search or ask the AI differently."
+        : "Type in the AI search bar above to find specific candidates using natural language."}
     </p>
   </div>
 );
 
 const MainContent = () => {
-  const { 
-    filteredCandidates, 
+  const {
+    filteredCandidates,
     candidates,
     searchTerm,
-    locationFilter, 
+    locationFilter,
     experienceFilter,
     lastAIQuery,
-    isLoading, 
-    error, 
-    loadCandidates 
+    isLoading,
+    error,
+    loadCandidates,
   } = useCandidates();
 
   useEffect(() => {
@@ -102,9 +112,11 @@ const MainContent = () => {
   if (error) return <ErrorState error={error} onRetry={loadCandidates} />;
 
   // Enhanced empty state logic
-  const hasFiltersApplied = searchTerm || locationFilter || experienceFilter || lastAIQuery;
+  const hasFiltersApplied =
+    searchTerm || locationFilter || experienceFilter || lastAIQuery;
   const hasNoCandidates = candidates.length === 0;
-  const hasNoFilteredResults = filteredCandidates.length === 0 && !hasNoCandidates;
+  const hasNoFilteredResults =
+    filteredCandidates.length === 0 && !hasNoCandidates;
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,7 +151,13 @@ const MainContent = () => {
           <div className="mt-8 mb-6 text-center">
             <div className="inline-flex items-center gap-4 px-6 py-3 bg-card/50 backdrop-blur-sm border border-border/50 rounded-full">
               <span className="text-sm text-muted-foreground">
-                Showing <strong className="text-foreground">{filteredCandidates.length}</strong> of <strong className="text-foreground">{candidates.length}</strong> candidates
+                Showing{" "}
+                <strong className="text-foreground">
+                  {filteredCandidates.length}
+                </strong>{" "}
+                of{" "}
+                <strong className="text-foreground">{candidates.length}</strong>{" "}
+                candidates
               </span>
               {lastAIQuery && (
                 <>

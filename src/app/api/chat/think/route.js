@@ -1,31 +1,30 @@
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { openai } from "@ai-sdk/openai";
+import { streamText } from "ai";
 
 export const maxDuration = 30;
 
 export async function POST(req) {
-  
   try {
     const { messages } = await req.json();
-    
+
     // Extract candidates from message data (sent on first message)
     let candidates = [];
-    let availableFields = '';
-    
+    let availableFields = "";
+
     // Find the message with candidates data
-    const messageWithCandidates = messages.find(msg => msg.data?.candidates);
-    
+    const messageWithCandidates = messages.find((msg) => msg.data?.candidates);
+
     if (messageWithCandidates?.data) {
       candidates = JSON.parse(messageWithCandidates.data.candidates);
       availableFields = messageWithCandidates.data.fields;
-      console.log('📋 Available fields:', availableFields);
+      console.log("📋 Available fields:", availableFields);
     } else {
-      throw new Error('No candidates data found in messages');
+      throw new Error("No candidates data found in messages");
     }
-    
+
     // Get the user's search query
-    const userMessage = messages[messages.length - 1]?.content || '';
-    
+    const userMessage = messages[messages.length - 1]?.content || "";
+
     // Enhanced prompt for JSON text generation
     const thinkPrompt = `
 You are an expert ATS (Applicant Tracking System) AI assistant. Your task is to analyze the user's candidate search request and generate a structured filter and ranking plan.
@@ -101,21 +100,23 @@ Generate the filter and rank plan for: "${userMessage}"`;
 
     // Use streamText properly
     const result = await streamText({
-      model: openai('gpt-4.1-mini'),
+      model: openai("gpt-4.1-mini"),
       prompt: thinkPrompt,
       temperature: 0.1,
-      maxTokens: 500
+      maxTokens: 500,
     });
 
     // Return the streaming response
     return result.toDataStreamResponse();
-    
   } catch (error) {
-    console.error('❌ THINK phase error:', error);
-    return Response.json({ 
-      success: false,
-      error: error.message,
-      phase: 'THINK'
-    }, { status: 500 });
+    console.error("❌ THINK phase error:", error);
+    return Response.json(
+      {
+        success: false,
+        error: error.message,
+        phase: "THINK",
+      },
+      { status: 500 },
+    );
   }
 }

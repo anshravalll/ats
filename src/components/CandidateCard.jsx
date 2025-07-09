@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { useCandidates } from '../../lib/context/CandidateContext';
-import { motion } from 'framer-motion';
+import Image from "next/image";
+import { useCandidates } from "../../lib/context/CandidateContext";
+import { motion } from "framer-motion";
 
 const CandidateCard = ({ candidate }) => {
   const { setSelectedCandidate } = useCandidates();
@@ -12,7 +12,7 @@ const CandidateCard = ({ candidate }) => {
       initial={{ opacity: 0, y: 60 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 60 }}
-      transition={{ duration: 1, ease: 'easeOut' }}
+      transition={{ duration: 1, ease: "easeOut" }}
       className="bg-card rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 animate-slide-up group"
       onClick={() => setSelectedCandidate(candidate)}
     >
@@ -34,7 +34,7 @@ const CandidateCard = ({ candidate }) => {
       <div className="mb-4">
         <div className="flex flex-wrap gap-2">
           {candidate.skills.slice(0, 4).map((skill, index) => (
-            <span 
+            <span
               key={index}
               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
             >
@@ -53,13 +53,17 @@ const CandidateCard = ({ candidate }) => {
       <div className="flex justify-between items-center pt-4 border-t border-border">
         <div className="text-lg font-semibold text-card-foreground">
           ${candidate.salary.toLocaleString()}
-          <span className="text-xs text-muted-foreground font-normal">/year</span>
+          <span className="text-xs text-muted-foreground font-normal">
+            /year
+          </span>
         </div>
-        <div className={`text-xs px-2 py-1 rounded-full font-medium ${
-          candidate.availability === 'Available' 
-            ? 'bg-chart-1/10 text-chart-1 border border-chart-1/20' 
-            : 'bg-chart-4/10 text-chart-4 border border-chart-4/20'
-        }`}>
+        <div
+          className={`text-xs px-2 py-1 rounded-full font-medium ${
+            candidate.availability === "Available"
+              ? "bg-chart-1/10 text-chart-1 border border-chart-1/20"
+              : "bg-chart-4/10 text-chart-4 border border-chart-4/20"
+          }`}
+        >
           {candidate.availability}
         </div>
       </div>

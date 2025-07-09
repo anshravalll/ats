@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useCandidates } from '../../lib/context/CandidateContext';
-import { useDebounce } from '../../lib/utils/debounce';
-import { useEffect, useState } from 'react';
+import { useCandidates } from "../../lib/context/CandidateContext";
+import { useDebounce } from "../../lib/utils/debounce";
+import { useEffect, useState } from "react";
 
 const SearchControls = () => {
   const {
@@ -18,7 +18,7 @@ const SearchControls = () => {
     clearFilters,
     getUniqueLocations,
     getTotalCandidates,
-    filteredCandidates
+    filteredCandidates,
   } = useCandidates();
 
   // Local state for immediate UI feedback
@@ -66,8 +66,10 @@ const SearchControls = () => {
             className="form-control"
           >
             <option value="">All Locations</option>
-            {uniqueLocations.map(location => (
-              <option key={location} value={location}>{location}</option>
+            {uniqueLocations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
             ))}
           </select>
 
@@ -104,7 +106,8 @@ const SearchControls = () => {
           </span>
           {searchTerm && (
             <span>
-              Searching for: "<strong className="text-foreground">{searchTerm}</strong>"
+              Searching for: "
+              <strong className="text-foreground">{searchTerm}</strong>"
             </span>
           )}
         </div>

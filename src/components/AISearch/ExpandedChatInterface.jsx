@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { X, History, Trash2 } from 'lucide-react';
-import { Chat } from '@/components/ui/chat';
-import { Button } from '@/components/ui/button';
-import { useCandidates } from '../../../lib/context/CandidateContext';
+import { useState, useEffect, useRef } from "react";
+import { X, History, Trash2 } from "lucide-react";
+import { Chat } from "@/components/ui/chat";
+import { Button } from "@/components/ui/button";
+import { useCandidates } from "../../../lib/context/CandidateContext";
 
 const ExpandedChatInterface = ({
   messages,
@@ -16,24 +16,24 @@ const ExpandedChatInterface = ({
   append,
   onCollapse,
   useMockAPI,
-  suggestions
+  suggestions,
 }) => {
   const [showHistory, setShowHistory] = useState(false);
   const { filteredCandidates, candidates } = useCandidates();
 
   // Prevent background scroll when modal is open
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'hidden';
-      
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "hidden";
+
       return () => {
-        document.body.style.overflow = 'unset';
+        document.body.style.overflow = "unset";
       };
     }
   }, []);
 
   const clearChatHistory = () => {
-    if (confirm('Clear all chat history?')) {
+    if (confirm("Clear all chat history?")) {
       // Implementation to clear chat history
       window.location.reload(); // Simple approach for now
     }
@@ -42,7 +42,6 @@ const ExpandedChatInterface = ({
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
-        
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -54,12 +53,15 @@ const ExpandedChatInterface = ({
                 ATS-Lite AI Assistant
               </h2>
               <p className="text-sm text-muted-foreground">
-                {filteredCandidates.length} of {candidates.length} candidates shown
-                {useMockAPI && <span className="text-yellow-600 ml-2">(Mock Mode)</span>}
+                {filteredCandidates.length} of {candidates.length} candidates
+                shown
+                {useMockAPI && (
+                  <span className="text-yellow-600 ml-2">(Mock Mode)</span>
+                )}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -78,11 +80,7 @@ const ExpandedChatInterface = ({
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCollapse}
-            >
+            <Button variant="ghost" size="sm" onClick={onCollapse}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -90,7 +88,6 @@ const ExpandedChatInterface = ({
 
         {/* Chat Content - This is the key container */}
         <div className="flex-1 flex min-h-0">
-          
           {/* Chat History Sidebar */}
           {showHistory && (
             <div className="w-80 border-r border-border p-4 overflow-y-auto flex-shrink-0">
@@ -108,7 +105,6 @@ const ExpandedChatInterface = ({
               isGenerating={isLoading}
               stop={stop}
               append={append}
-              suggestions={useMockAPI && messages.length === 0 ? suggestions : []}
               className="h-full w-full"
               placeholder="Ask me to find specific candidates..."
             />
