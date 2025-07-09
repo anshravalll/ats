@@ -237,6 +237,14 @@ const AIFeedbackTimeline = ({
     };
   }, []);
 
+  // Fix: Reset body scroll when collapsing
+  useEffect(() => {
+    if (collapsed) {
+      document.body.style.overflow = "auto";
+      setIsHovered(false);
+    }
+  }, [collapsed]);
+
   // Timeline data
   const steps = [
     {
@@ -376,7 +384,12 @@ const AIFeedbackTimeline = ({
             <div className="flex gap-1">
               <button
                 className="p-1 rounded hover:bg-muted/40"
-                onClick={() => setCollapsed(true)}
+                onClick={() => {
+                  setCollapsed(true);
+                  // Ensure body scroll is restored when collapsing
+                  document.body.style.overflow = "auto";
+                  setIsHovered(false);
+                }}
                 title="Collapse sidebar"
               >
                 <ChevronDown className="w-5 h-5" />
