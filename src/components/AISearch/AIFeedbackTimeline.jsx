@@ -17,7 +17,7 @@ const phaseMeta = {
     icon: Brain,
     color: "text-blue-500",
     bg: "bg-blue-100 dark:bg-blue-900/30",
-    title: "Understanding your requirements",
+    title: "Curating an action plan",
   },
   act: {
     icon: Zap,
@@ -378,7 +378,7 @@ const AIFeedbackTimeline = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="text-base font-semibold text-card-foreground">
-                Query History
+                  Query Timeline
               </span>
             </div>
             <div className="flex gap-1">
