@@ -4,7 +4,6 @@ import { generateText } from 'ai';
 export const maxDuration = 30;
 
 export async function POST(req) {
-  console.log('💬 SPEAK Phase API called');
   
   try {
     const { userQuery, topCandidates, filteredCount, totalCount } = await req.json();
@@ -18,9 +17,7 @@ export async function POST(req) {
       throw new Error('No user query provided');
     }
     
-    console.log('📊 Processing summary for', topCandidates.length, 'top candidates');
     console.log('🔍 Original query:', userQuery);
-    console.log('📈 Filtered count:', filteredCount, 'from', totalCount, 'total');
     
     // Create comprehensive recruitment summary prompt with ALL available fields
     const summaryPrompt = `You are a professional recruiter creating a summary for hiring managers. 
@@ -66,13 +63,11 @@ Create a professional, concise recruitment summary (4-5 sentences) that highligh
 - Reference specific skills, experience levels, and qualifications from the data
 - Be specific about salary ranges, availability, and work preferences
 - Highlight any unique combinations of skills or experience
+- Keep it under 100 words and use paragraphs
 
 **TONE:** Professional, confident, and actionable
 **FORMAT:** Natural paragraph format, no bullet points
-**FOCUS:** Quality matches, ranking justification, and practical hiring insights
-
-End your response with this exact format for candidate IDs:
-[CANDIDATE_IDS: ${topCandidates.map(c => c.id).join(', ')}]`;
+**FOCUS:** Quality matches, ranking justification, and practical hiring insights`;
 
     // Generate completion response using AI SDK
     const result = await generateText({
@@ -91,7 +86,6 @@ End your response with this exact format for candidate IDs:
       maxTokens: 600,   // Increased for more comprehensive summaries
     });
 
-    console.log('✅ SPEAK phase completion response received');
     
     return new Response(JSON.stringify({
       success: true,

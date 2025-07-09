@@ -4,7 +4,6 @@ import { streamText } from 'ai';
 export const maxDuration = 30;
 
 export async function POST(req) {
-  console.log('🧠 THINK Phase API called');
   
   try {
     const { messages } = await req.json();
@@ -15,12 +14,10 @@ export async function POST(req) {
     
     // Find the message with candidates data
     const messageWithCandidates = messages.find(msg => msg.data?.candidates);
-    console.log("Check this ", messageWithCandidates);
     
     if (messageWithCandidates?.data) {
       candidates = JSON.parse(messageWithCandidates.data.candidates);
       availableFields = messageWithCandidates.data.fields;
-      console.log('📊 Intercepted candidates:', candidates.length);
       console.log('📋 Available fields:', availableFields);
     } else {
       throw new Error('No candidates data found in messages');
@@ -28,7 +25,6 @@ export async function POST(req) {
     
     // Get the user's search query
     const userMessage = messages[messages.length - 1]?.content || '';
-    console.log('🔍 User query:', userMessage);
     
     // Enhanced prompt for JSON text generation
     const thinkPrompt = `

@@ -110,8 +110,13 @@ const MainContent = () => {
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex justify-between items-center">
-            <div className="text-center flex-1">
+          <div className="flex items-center justify-between relative">
+            {/* Theme toggle on the left */}
+            <div className="flex items-center justify-start w-12">
+              <ThemeToggle />
+            </div>
+            {/* Centered title and subtitle */}
+            <div className="flex-1 text-center">
               <h1 className="text-5xl font-bold text-foreground mb-4 bg-gradient-to-r from-primary via-chart-1 to-primary bg-clip-text text-transparent">
                 ATS-Lite
               </h1>
@@ -119,7 +124,8 @@ const MainContent = () => {
                 AI-powered candidate discovery & recruitment
               </p>
             </div>
-            <ThemeToggle />
+            {/* Right spacer for symmetry */}
+            <div className="w-12" />
           </div>
         </div>
       </header>

@@ -67,8 +67,8 @@ const ExpandedChatInterface = ({
               onClick={() => setShowHistory(!showHistory)}
               className="flex items-center gap-2"
             >
-              <History className="w-4 h-4" />
-              History
+              {/* <History className="w-4 h-4" />
+              History */}
             </Button>
             <Button
               variant="ghost"

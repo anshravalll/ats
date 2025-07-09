@@ -5,7 +5,6 @@
  * @returns {Array} Filtered candidates
  */
 export function filterCandidates(plan, candidates) {
-  console.log('🔍 ACT 1: Filtering candidates with plan:', plan);
 
   if (!plan || typeof plan !== 'object') {
     console.warn('Invalid filter plan, returning all candidates');
@@ -34,7 +33,6 @@ export function filterCandidates(plan, candidates) {
     });
   }
 
-  console.log(`✅ Filtered ${filtered.length} from ${candidates.length} candidates`);
   return filtered;
 }
 
@@ -46,7 +44,6 @@ export function filterCandidates(plan, candidates) {
  * @returns {Array} Ranked candidates
  */
 export function rankCandidates(ids, plan, candidates) {
-  console.log('📊 ACT 2: Ranking candidates with plan:', plan);
 
   if (!plan || typeof plan !== 'object') {
     console.warn('Invalid rank plan, returning candidates filtered by ids only');
@@ -57,9 +54,7 @@ export function rankCandidates(ids, plan, candidates) {
   const sortFields = [plan.primary, ...(plan.tie_breakers || [])];
 
   // Debug: Show candidates before ranking
-  console.log('🔢 CANDIDATES BEFORE RANKING:');
   subset.slice(0, 3).forEach((candidate, index) => {
-    console.log(`${index + 1}. ${candidate.name || candidate.id} - ${plan.primary}: ${candidate[plan.primary]}`);
   });
 
   const ranked = subset.sort((a, b) => {
@@ -73,20 +68,15 @@ export function rankCandidates(ids, plan, candidates) {
   });
 
   // Debug: Show candidates after ranking
-  console.log('🔢 CANDIDATES AFTER RANKING:');
   ranked.slice(0, 3).forEach((candidate, index) => {
-    console.log(`${index + 1}. ${candidate.name || candidate.id} - ${plan.primary}: ${candidate[plan.primary]}`);
   });
 
   // Debug: Show order change
   const beforeIds = subset.map(c => c.id);
   const afterIds = ranked.map(c => c.id);
-  console.log('🔄 ORDER COMPARISON:');
   console.log('Before:', beforeIds.slice(0, 5));
-  console.log('After:', afterIds.slice(0, 5));
   console.log('Order changed?', JSON.stringify(beforeIds) !== JSON.stringify(afterIds));
 
-  console.log(`✅ Ranked ${ranked.length} candidates`);
   return ranked;
 }
 
@@ -97,7 +87,6 @@ export function rankCandidates(ids, plan, candidates) {
  * @returns {Object} Aggregated stats: count, avg_experience, top_skills
  */
 export function aggregateStats(ids, candidates) {
-  console.log('📈 Aggregating stats for candidates');
 
   const subset = candidates.filter(c => ids.includes(c.id));
   const count = subset.length;
@@ -125,8 +114,149 @@ export function aggregateStats(ids, candidates) {
     .map(([skill, count]) => ({ skill, count }));
 
   const stats = { count, avg_experience, top_skills };
-  console.log('✅ Stats calculated:', stats);
   return stats;
+}
+
+/**
+ * Makes an API call to get AI plan for filtering and ranking candidates
+ * @param {string} userQuery - The user's search query
+ * @param {Array} candidates - Array of all candidates (optional, will be sent if provided)
+ * @param {boolean} useMockAPI - Whether to use mock API endpoint
+ * @returns {Promise<Object>} AI response with filter and rank plans
+ */
+export async function getAIPlan(userQuery, candidates = null, useMockAPI = false) {
+  
+  const apiEndpoint = useMockAPI ? '/api/chat/candidates-mock' : '/api/chat/think';
+  
+  try {
+    const requestBody = {
+      messages: [
+        {
+          role: 'user',
+          content: userQuery,
+          ...(candidates && {
+            data: {
+              candidates: JSON.stringify(candidates),
+              fields: Object.keys(candidates[0] || {}).join(', ')
+            }
+          })
+        }
+      ]
+    };
+
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract the AI response from the streaming response
+    const aiMessage = data.messages?.find(msg => msg.role === 'assistant');
+    if (!aiMessage?.content) {
+      throw new Error('No AI response found in API response');
+    }
+
+    // Parse the JSON from the AI response (similar to UI logic)
+    const firstBrace = aiMessage.content.indexOf('{');
+    const lastBrace = aiMessage.content.lastIndexOf('}');
+    
+    if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
+      throw new Error('No valid JSON found in AI response');
+    }
+    
+    const jsonString = aiMessage.content.substring(firstBrace, lastBrace + 1);
+    const aiResponse = JSON.parse(jsonString);
+    
+    const filterPlan = aiResponse.filter || { include: [], exclude: [] };
+    const rankPlan = aiResponse.rank || { primary: 'years_experience', tie_breakers: [] };
+    
+    
+    return {
+      filterPlan,
+      rankPlan,
+      rawResponse: aiMessage.content
+    };
+    
+  } catch (error) {
+    console.error('❌ Error getting AI plan:', error);
+    throw error;
+  }
+}
+
+/**
+ * Executes a complete AI search workflow: get plan, filter, rank, and optionally summarize
+ * @param {string} userQuery - The user's search query
+ * @param {Array} candidates - Array of all candidates
+ * @param {boolean} useMockAPI - Whether to use mock API endpoint
+ * @param {boolean} generateSummary - Whether to generate a summary (default: false)
+ * @returns {Promise<Object>} Complete search results
+ */
+export async function executeAISearch(userQuery, candidates, useMockAPI = false, generateSummary = false) {
+  
+  try {
+    // Step 1: Get AI plan
+    const { filterPlan, rankPlan } = await getAIPlan(userQuery, candidates, useMockAPI);
+    
+    // Step 2: Filter candidates
+    const filteredCandidates = filterCandidates(filterPlan, candidates);
+    const filteredIds = filteredCandidates.map(c => c.id);
+    
+    // Step 3: Rank candidates
+    const rankedCandidates = rankCandidates(filteredIds, rankPlan, candidates);
+    const rankedIds = rankedCandidates.map(c => c.id);
+    
+    // Step 4: Generate summary (optional)
+    let summary = null;
+    if (generateSummary) {
+      try {
+        const topCandidates = rankedCandidates.slice(0, 5);
+        const speakResponse = await fetch('/api/chat/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userQuery: userQuery,
+            topCandidates: topCandidates,
+            filteredCount: rankedCandidates.length,
+            totalCount: candidates.length
+          }),
+        });
+        
+        if (speakResponse.ok) {
+          const speakResult = await speakResponse.json();
+          if (speakResult.success) {
+            summary = speakResult.text;
+          }
+        }
+      } catch (summaryError) {
+        console.warn('⚠️ Summary generation failed:', summaryError);
+      }
+    }
+    
+    const results = {
+      userQuery,
+      filterPlan,
+      rankPlan,
+      filteredCandidates,
+      rankedCandidates,
+      rankedIds,
+      summary,
+      stats: aggregateStats(rankedIds, candidates)
+    };
+    
+    return results;
+    
+  } catch (error) {
+    console.error('❌ AI search workflow failed:', error);
+    throw error;
+  }
 }
 
 // Helper functions

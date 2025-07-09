@@ -22,7 +22,6 @@ export function useMCPWorkflow() {
     // No API endpoint - we control the flow manually
     onFinish: (message) => {
       // This only triggers when we manually add the final SPEAK response
-      console.log('✅ Final SPEAK response displayed');
     }
   });
 
@@ -49,12 +48,10 @@ export function useMCPWorkflow() {
       
       if (!csvSent) {
         setCsvSent(true);
-        console.log('📤 CSV data sent with first request');
       }
 
       // PHASE 1: THINK (Hidden from user)
       setCurrentPhase('THINK');
-      console.log('🧠 Starting THINK phase...');
       
       // In your useMCPWorkflow hook - replace the THINK phase call
       const thinkResponse = await fetch('/api/chat/think', {
@@ -75,28 +72,23 @@ export function useMCPWorkflow() {
       const thinkResult = await thinkResponse.json();
       if (!thinkResult.success) throw new Error(thinkResult.error);
       
-      console.log('✅ THINK completed:', thinkResult.data);
 
       // PHASE 2: ACT (Hidden from user, client-side processing)
       setCurrentPhase('ACT');
-      console.log('🔍 Starting ACT phase...');
       
       // Import MCP tools dynamically
       const { filterCandidates, rankCandidates } = await import('../lib/mcp-tools');
       
       // Filter candidates based on THINK output
       const filteredCandidates = filterCandidates(thinkResult.data.filter, candidates);
-      console.log(`Filtered to ${filteredCandidates.length} candidates`);
       
       // Rank filtered candidates
       const rankedCandidates = rankCandidates(filteredCandidates, thinkResult.data.rank);
       const topCandidates = rankedCandidates.slice(0, 5);
       
-      console.log('✅ ACT completed:', topCandidates.length, 'top candidates');
 
       // PHASE 3: SPEAK (Will be visible to user)
       setCurrentPhase('SPEAK');
-      console.log('💬 Starting SPEAK phase...');
       
       const speakResponse = await fetch('/api/chat/speak', {
         method: 'POST',
@@ -149,7 +141,6 @@ export function useMCPWorkflow() {
         plans: thinkResult.data
       });
       
-      console.log('✅ MCP workflow completed successfully');
       
     } catch (error) {
       console.error('❌ MCP workflow failed:', error);

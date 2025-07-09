@@ -5,20 +5,16 @@ import { streamText } from 'ai';
 export const maxDuration = 30;
 
 export async function POST(req) {
-  console.log('🚀 API POST endpoint called');
   
   try {
     const { messages } = await req.json();
-    console.log('📨 Received messages:', JSON.stringify(messages, null, 2));
     console.log('📊 Messages count:', messages?.length || 0);
 
-    console.log('🤖 Creating streaming text with OpenAI...');
     const result = streamText({
       model: openai('gpt-4.1-nano'),
       messages,
     });
 
-    console.log('✅ Streaming result created successfully');
     console.log('📤 Returning data stream response');
     
     return result.toDataStreamResponse();

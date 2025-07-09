@@ -9,6 +9,7 @@ import { useCandidates } from '../../../lib/context/CandidateContext';
 import { cn } from '@/lib/utils';
 import ExpandedChatInterface from './ExpandedChatInterface';
 import { filterCandidates, rankCandidates } from '@/lib/mcp-tools';
+import AIFeedbackTimeline from './AIFeedbackTimeline';
 
 const StickyAIInterface = () => {
   const [isSticky, setIsSticky] = useState(false);
@@ -16,6 +17,20 @@ const StickyAIInterface = () => {
   const [isManuallyHidden, setIsManuallyHidden] = useState(false);
   const [useMockAPI, setUseMockAPI] = useState(false);
   const [csvSent, setCsvSent] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState(null);
+  const [phaseProgress, setPhaseProgress] = useState({
+    think: false,
+    act: false,
+    summarize: false
+  });
+  const [filterPlan, setFilterPlan] = useState(null);
+  const [rankPlan, setRankPlan] = useState(null);
+  const [candidateCount, setCandidateCount] = useState(null);
+  const [rankedIds, setRankedIds] = useState([]);
+  const [summary, setSummary] = useState('');
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
 
   const { filteredCandidates, applyAIFilters, candidates } = useCandidates();
 
@@ -38,79 +53,61 @@ const StickyAIInterface = () => {
 
   const apiEndpoint = useMockAPI ? '/api/chat/candidates-mock' : '/api/chat/think';
 
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    isLoading, 
-    stop, 
-    append, 
-    setMessages 
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    stop,
+    append,
+    setMessages,
+    setInput
   } = useChat({
     api: apiEndpoint,
     onError: (error) => {
-      console.log('AI API Error:', error);
+      setCurrentPhase(null);
+      setPhaseProgress({ think: false, act: false, summarize: false });
+      setFilterPlan(null);
+      setRankPlan(null);
+      setCandidateCount(null);
+      setRankedIds([]);
+      setSummary('');
+      setStartTime(null);
+      setEndTime(null);
     },
     onFinish: (message) => {
       try {
-        console.log('Raw AI Response:', message.content);
-    
         // Use first { to last } approach instead of regex
         const firstBrace = message.content.indexOf('{');
         const lastBrace = message.content.lastIndexOf('}');
-        
-        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
-          console.warn('No valid JSON braces found');
-          return;
-        }
-        
+        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) return;
         const jsonString = message.content.substring(firstBrace, lastBrace + 1);
-        console.log('Extracted JSON string:', jsonString);
-        
         const aiResponse = JSON.parse(jsonString);
-        console.log('✅ PARSED JSON OBJECT:', aiResponse);
-        
         const filterPlan = aiResponse.filter || { include: [], exclude: [] };
         const rankPlan = aiResponse.rank || { primary: 'years_experience', tie_breakers: [] };
-        
-        console.log('🔍 Filter plan:', filterPlan);
-        console.log('📊 Rank plan:', rankPlan);
-    
+        setFilterPlan(filterPlan);
+        setRankPlan(rankPlan);
+        setCurrentPhase('act');
+        setPhaseProgress(prev => ({ ...prev, think: true, act: true }));
         // ACT 1: Filter candidates
         const filteredCandidatesResult = filterCandidates(filterPlan, candidates);
+        setCandidateCount(filteredCandidatesResult.length);
         const filteredIds = filteredCandidatesResult.map(c => c.id);
-        
-        console.log('✅ ACT 1 Complete - Filtered:', filteredCandidatesResult.length);
-    
         // ACT 2: Rank candidates
         const rankedCandidates = rankCandidates(filteredIds, rankPlan, candidates);
         const rankedIds = rankedCandidates.map(c => c.id);
-        
-        console.log('✅ ACT 2 Complete - Ranked:', rankedCandidates.length);
-        console.log('🎯 Top 3 ranked candidates:', 
-          rankedCandidates.slice(0, 3).map(c => 
-            `${c.name} (${rankPlan.primary}: ${c[rankPlan.primary]})`
-          )
-        );
-    
-        // Apply results to UI with ranked order
-        console.log('✅ Applying ranked results to UI');
+        setRankedIds(rankedIds);
         applyAIFilters(rankedIds, input);
-    
         // ACT 3: Generate SPEAK summary with ranked candidates
         const callSpeakAPI = async () => {
           try {
-            console.log('🗣️ SPEAK Phase: Generating recruitment summary...');
-            
-            // Take top 5 ranked candidates for summary
+            setCurrentPhase('summarize');
+            setPhaseProgress(prev => ({ ...prev, summarize: true }));
             const topCandidates = rankedCandidates.slice(0, 5);
-            
             const speakResponse = await fetch('/api/chat/speak', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 userQuery: input,
                 topCandidates: topCandidates,
@@ -118,74 +115,60 @@ const StickyAIInterface = () => {
                 totalCount: candidates.length
               }),
             });
-    
-            if (!speakResponse.ok) {
-              throw new Error(`SPEAK API error: ${speakResponse.status}`);
-            }
-    
+            if (!speakResponse.ok) throw new Error(`SPEAK API error: ${speakResponse.status}`);
             const speakResult = await speakResponse.json();
-            
             if (speakResult.success) {
-              console.log('✅ SPEAK Phase Complete - Generated summary');
-              
-              // Create the recruitment summary message
-              const summaryMessage = {
-                id: `speak-summary-${Date.now()}`,
-                createdAt: new Date(),
-                role: "assistant",
+              setSummary(speakResult.text);
+              setCurrentPhase(null);
+              setEndTime(Date.now());
+              setMessages(prevMessages => [...prevMessages, {
+                role: 'assistant',
                 content: speakResult.text,
-                parts: [
-                  {
-                    type: "text",
-                    text: speakResult.text
-                  }
-                ],
-                showTimeStamp: true,
-                animation: "scale"
-              };
-    
-              // Add the summary as the final AI message
-              setMessages(prevMessages => [
-                ...prevMessages,
-                summaryMessage
-              ]);
-              
-              console.log('✅ Recruitment summary added to chat');
-              
+                id: 'speak-summary'
+              }]);
             } else {
-              console.error('❌ SPEAK Phase failed:', speakResult.error);
+              setCurrentPhase(null);
             }
-            
           } catch (error) {
-            console.error('❌ SPEAK API call failed:', error);
+            setCurrentPhase(null);
           }
         };
-    
-        // Call SPEAK API after a small delay to ensure UI updates complete
         setTimeout(callSpeakAPI, 500);
-    
       } catch (error) {
-        console.error('Processing error:', error);
+        setCurrentPhase(null);
+        setPhaseProgress({ think: false, act: false, summarize: false });
+        setFilterPlan(null);
+        setRankPlan(null);
+        setCandidateCount(null);
+        setRankedIds([]);
+        setSummary('');
+        setStartTime(null);
+        setEndTime(null);
       }
-    
-      // Hide assistant messages (only the original THINK response)
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.role === 'assistant' && !msg.id.includes('speak-summary')
-            ? { ...msg, hidden: true } 
-            : msg
-        )
-      );
+      setMessages(prevMessages => prevMessages.map(msg => msg.role === 'assistant' && !msg.id?.includes('speak-summary') ? { ...msg, hidden: true } : msg));
     }
-  }); // ✅ ADDED: Missing closing brace and parenthesis
-  
+  });
+
+
+  const filteredMessages = (messages) => {
+    return messages.filter(msg => msg.role === 'user' || (msg.role === 'assistant' && msg.id?.includes('speak-summary')));
+  }
+
   // Enhanced submit handler that includes CSV data on first request
   const enhancedHandleSubmit = useCallback((e) => {
     e.preventDefault();
+    setInput('');
     if (!input.trim() || isLoading) return;
-
+    setCurrentPhase('think');
+    setPhaseProgress({ think: true, act: false, summarize: false });
+    setFilterPlan(null);
+    setRankPlan(null);
+    setCandidateCount(null);
+    setRankedIds([]);
+    setSummary('');
+    setStartTime(Date.now());
+    setEndTime(null);
     if (!csvSent && candidates.length > 0) {
-      console.log('📤 Sending CSV data with first request');
       append({
         role: 'user',
         content: input,
@@ -217,7 +200,6 @@ const StickyAIInterface = () => {
         }
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -229,7 +211,6 @@ const StickyAIInterface = () => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const shouldBeSticky = scrollTop > 250;
-
       if (isManuallyHidden) {
         if (scrollTop <= 100) {
           setIsManuallyHidden(false);
@@ -239,7 +220,6 @@ const StickyAIInterface = () => {
         setIsSticky(shouldBeSticky);
       }
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isManuallyHidden]);
@@ -257,6 +237,16 @@ const StickyAIInterface = () => {
     setIsSticky(false);
     setIsExpanded(false);
     setCsvSent(false);
+    setCurrentPhase(null);
+    setPhaseProgress({ think: false, act: false, summarize: false });
+    setFilterPlan(null);
+    setRankPlan(null);
+    setCandidateCount(null);
+    setRankedIds([]);
+    setSummary('');
+    setStartTime(null);
+    setEndTime(null);
+    setTimelineCollapsed(false);
   }, []);
 
   const handleSuggestionClick = useCallback((suggestion) => {
@@ -273,6 +263,23 @@ const StickyAIInterface = () => {
 
   return (
     <>
+      {/* AI Feedback Timeline Sidebar */}
+      <AIFeedbackTimeline
+        query={input}
+        phase={currentPhase}
+        phaseProgress={phaseProgress}
+        filterPlan={filterPlan}
+        rankPlan={rankPlan}
+        candidateCount={candidateCount}
+        rankedIds={rankedIds}
+        summary={summary}
+        startTime={startTime}
+        endTime={endTime}
+        collapsed={timelineCollapsed}
+        onClose={handleClose}
+        onCollapse={() => setTimelineCollapsed(true)}
+      />
+
       {/* Minimal Sticky AI Bar */}
       <div className={cn(
         "transition-all duration-500 ease-out",
@@ -285,7 +292,6 @@ const StickyAIInterface = () => {
           "absolute inset-0 bg-gradient-to-r from-primary/20 via-chart-1/30 to-primary/20 rounded-2xl blur-xl transition-all duration-700",
           isSticky ? "opacity-80 scale-105" : "opacity-40 scale-100"
         )} />
-
         {/* Main Interface */}
         <div className={cn(
           "relative bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-lg transition-all duration-500",
@@ -314,7 +320,6 @@ const StickyAIInterface = () => {
                 </div>
               )}
             </div>
-
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
                 <Button
@@ -344,7 +349,6 @@ const StickyAIInterface = () => {
               </Button>
             </div>
           </div>
-
           {/* Input Section */}
           <div className="p-4">
             <form onSubmit={enhancedHandleSubmit}>
@@ -362,7 +366,6 @@ const StickyAIInterface = () => {
                 enableInterrupt={true}
               />
             </form>
-
             {/* Mock Suggestions */}
             {useMockAPI && (
               <div className="mt-2 flex flex-wrap gap-1">
@@ -380,7 +383,6 @@ const StickyAIInterface = () => {
                 ))}
               </div>
             )}
-
             {/* Status Info */}
             <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
               <span>
@@ -391,7 +393,7 @@ const StickyAIInterface = () => {
                   </span>
                 ) : (
                   <span>
-                    Press <span className="font-mono bg-muted px-1 rounded">⊞ + Enter</span> or <span className="font-mono bg-muted px-1 rounded">Enter</span> to send
+                    Press <span className="font-mono bg-muted px-1 rounded">Enter</span> to send
                     {useMockAPI && <span className="ml-2 text-yellow-600">or click buttons above</span>}
                   </span>
                 )}
@@ -405,13 +407,11 @@ const StickyAIInterface = () => {
           </div>
         </div>
       </div>
-
       {isSticky && <div className="h-20" />}
-
       {/* Expanded Chat Interface */}
       {isExpanded && (
         <ExpandedChatInterface
-          messages={messages}
+          messages={filteredMessages(messages)}
           input={input}
           handleInputChange={handleInputChange}
           handleSubmit={enhancedHandleSubmit}
