@@ -30,38 +30,53 @@ export async function POST(req) {
     const userMessage = messages[messages.length - 1]?.content || '';
     console.log('🔍 User query:', userMessage);
     
-    // RIGID prompt with ONLY available fields from csvLoader.js
+    // Enhanced prompt for JSON text generation
     const thinkPrompt = `
-You are an ATS AI assistant. Generate a JSON filter and ranking plan using ONLY the available fields listed below.
+You are an expert ATS (Applicant Tracking System) AI assistant. Your task is to analyze the user's candidate search request and generate a structured filter and ranking plan.
 
-**USER QUERY:** "${userMessage}"
+**USER REQUEST:** "${userMessage}"
 
-**CRITICAL RULES:**
-1. You MUST respond with ONLY a valid JSON object - NO other text
-2. You MUST use ONLY the fields listed in AVAILABLE FIELDS section
-3. You MUST use ONLY the operators listed for each field type
-4. Do NOT use any field not explicitly listed below
-5. Do NOT add explanatory text before or after JSON
-6. Do NOT use markdown formatting or code blocks
+**AVAILABLE CANDIDATE FIELDS:** ${availableFields}
 
-**AVAILABLE FIELDS (FROM CSV LOADER - ONLY USE THESE):**
+**CRITICAL INSTRUCTIONS:**
+- You MUST respond with ONLY a valid JSON object
+- Do NOT include any explanatory text before or after the JSON
+- Do NOT use markdown code blocks or formatting
+- The JSON must be parseable by JSON.parse()
+- Follow the exact schema structure shown below
 
-**Original CSV Fields:**
+**REQUIRED JSON SCHEMA:**
+{
+  "filter": {
+    "include": [{"field": "string", "type": "exact|contains|regex|gte|lte|boolean", "value": "string|number|boolean"}],
+    "exclude": [{"field": "string", "type": "exact|contains|regex|gte|lte|boolean", "value": "string|number|boolean"}]
+  },
+  "rank": {
+    "primary": "string",
+    "tie_breakers": ["string", "string"]
+  }
+}
+
+**FIELD REFERENCE & types:**
 - **id** (numeric): Use gte/lte for ID ranges
-- **full_name** (string): Use "contains" for name matching
-- **title** (string): Use "contains" for job title matching  
-- **location** (string): Use "contains" for city/state/country matching
+- **full_name** (string): Use "contains" for full name matching
+- **name** (string): Use "contains" for name matching (enhanced field)
+- **title** (string): Use "contains" for job title matching
+- **location** (string): Use "contains" for city/country matching
 - **timezone** (string): Use "exact" for timezone matching
 - **years_experience** (numeric): Use gte/lte for experience ranges
-- **skills** (string): Use "contains" for skill matching (semicolon-separated)
+- **experience** (numeric): Use gte/lte for experience ranges (enhanced field)
+- **skills** (semicolon-separated): Use "contains" for skill matching
 - **languages** (string): Use "contains" for language matching
-- **education_level** (string): Use "exact" for education level
+- **education_level** (string): Use "exact" for education level (Bachelor's/Master's/PhD/Bootcamp)
 - **degree_major** (string): Use "contains" for degree field matching
 - **availability_weeks** (numeric): Use gte/lte for availability timeframe
+- **availability** (string): Use "contains" for availability status (enhanced field)
 - **willing_to_relocate** (boolean): Use "boolean" for true/false
 - **work_preference** (string): Use "exact" for Remote/Onsite/Hybrid
 - **notice_period_weeks** (numeric): Use gte/lte for notice period
 - **desired_salary_usd** (numeric): Use gte/lte for salary ranges
+- **salary** (numeric): Use gte/lte for salary ranges (enhanced field)
 - **open_to_contract** (boolean): Use "boolean" for contract availability
 - **remote_experience_years** (numeric): Use gte/lte for remote work experience
 - **visa_status** (string): Use "exact" for visa requirements
@@ -69,55 +84,22 @@ You are an ATS AI assistant. Generate a JSON filter and ranking plan using ONLY 
 - **summary** (string): Use "contains" for summary text matching
 - **tags** (string): Use "contains" for tag matching
 - **last_active** (string): Use "contains" for activity status
+- **linkedin_url** (string): Use "contains" for LinkedIn profile matching
 
-**Enhanced Fields (Also Available):**
-- **name** (string): Use "contains" for name matching
-- **experience** (numeric): Use gte/lte for experience ranges
-- **salary** (numeric): Use gte/lte for salary ranges
-- **availability** (string): Use "contains" for availability status
+**EXAMPLES:**
 
-**ALLOWED OPERATORS ONLY:**
-- "contains" - for string/text matching
-- "gte" - for greater than or equal (numbers only)
-- "lte" - for less than or equal (numbers only)
-- "exact" - for exact string matching
-- "boolean" - for true/false values only
-
-**REQUIRED JSON STRUCTURE:**
-{
-  "filter": {
-    "include": [{"field": "FIELD_NAME", "type": "OPERATOR", "value": "VALUE"}],
-    "exclude": [{"field": "FIELD_NAME", "type": "OPERATOR", "value": "VALUE"}]
-  },
-  "rank": {
-    "primary": "FIELD_NAME",
-    "tie_breakers": ["FIELD_NAME"]
-  }
-}
-
-**STRICT EXAMPLES:**
-
-Query: "React developers with 5+ years"
+Query: "React developers with 5+ years in Germany"
 Response:
-{"filter":{"include":[{"field":"skills","type":"contains","value":"React"},{"field":"years_experience","type":"gte","value":5}],"exclude":[]},"rank":{"primary":"years_experience","tie_breakers":["desired_salary_usd"]}}
+{"filter":{"include":[{"field":"skills","type":"contains","value":"React"},{"field":"years_experience","type":"gte","value":5},{"field":"location","type":"contains","value":"Germany"}]},"rank":{"primary":"years_experience","tie_breakers":["remote_experience_years","desired_salary_usd"]}}
 
-Query: "Remote Python developers willing to relocate under 120k"
+Query: "Senior remote Python developers under 150k"
 Response:
-{"filter":{"include":[{"field":"skills","type":"contains","value":"Python"},{"field":"work_preference","type":"exact","value":"Remote"},{"field":"willing_to_relocate","type":"boolean","value":true},{"field":"desired_salary_usd","type":"lte","value":120000}],"exclude":[]},"rank":{"primary":"years_experience","tie_breakers":["remote_experience_years"]}}
+{"filter":{"include":[{"field":"skills","type":"contains","value":"Python"},{"field":"work_preference","type":"exact","value":"Remote"},{"field":"desired_salary_usd","type":"lte","value":150000}]},"rank":{"primary":"years_experience","tie_breakers":["remote_experience_years"]}}
 
-Query: "Senior engineers in New York available immediately"
-Response:
-{"filter":{"include":[{"field":"title","type":"contains","value":"Senior"},{"field":"location","type":"contains","value":"New York"},{"field":"availability_weeks","type":"lte","value":0}],"exclude":[]},"rank":{"primary":"years_experience","tie_breakers":["desired_salary_usd"]}}
-
-**VALIDATION CHECKLIST:**
-- ✓ Only use fields from the AVAILABLE FIELDS list above
-- ✓ Only use operators: contains, gte, lte, exact, boolean
-- ✓ Primary ranking field must be numeric: years_experience, experience, desired_salary_usd, salary, remote_experience_years
-- ✓ Tie breakers must be from available fields
-- ✓ Response must be valid JSON with no extra text
-- ✓ Boolean fields only accept true/false values
-- ✓ Numeric fields only use gte/lte operators
-- ✓ String fields use contains/exact operators
+**IMPORTANT:**
+- Return ONLY the JSON object
+- No explanations, no text, no formatting
+- Must be valid JSON that passes JSON.parse()
 
 Generate the filter and rank plan for: "${userMessage}"`;
 
@@ -125,8 +107,8 @@ Generate the filter and rank plan for: "${userMessage}"`;
     const result = await streamText({
       model: openai('gpt-4.1-mini'),
       prompt: thinkPrompt,
-      temperature: 0.0, // Set to 0 for maximum consistency
-      maxTokens: 400     // Increased slightly to handle larger field list
+      temperature: 0.1,
+      maxTokens: 500
     });
 
     // Return the streaming response

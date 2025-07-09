@@ -56,14 +56,21 @@ const StickyAIInterface = () => {
       try {
         console.log('Raw AI Response:', message.content);
     
-        // JSON extraction logic...
-        const jsonMatch = message.content.match(/\{(?:[^{}]|{[^{}]*})*\}/);
-        if (!jsonMatch) {
-          console.warn('No JSON found in AI response');
+        // Use first { to last } approach instead of regex
+        const firstBrace = message.content.indexOf('{');
+        const lastBrace = message.content.lastIndexOf('}');
+        
+        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
+          console.warn('No valid JSON braces found');
           return;
         }
-    
-        const aiResponse = JSON.parse(jsonMatch[0]);
+        
+        const jsonString = message.content.substring(firstBrace, lastBrace + 1);
+        console.log('Extracted JSON string:', jsonString);
+        
+        const aiResponse = JSON.parse(jsonString);
+        console.log('✅ PARSED JSON OBJECT:', aiResponse); // ← This will show you what's actually parsed
+        
         const filterPlan = aiResponse.filter || { include: [], exclude: [] };
         const rankPlan = aiResponse.rank || { primary: 'years_experience', tie_breakers: [] };
     
