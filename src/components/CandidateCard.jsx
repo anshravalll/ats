@@ -24,7 +24,7 @@ const CandidateCard = ({ candidate }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 60 }}
       transition={{ duration: 1, ease: "easeOut" }}
-      className="bg-card rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 animate-slide-up group"
+      className="bg-card rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 animate-slide-up group relative h-[240px]"
       onClick={() => setSelectedCandidate(candidate)}
     >
       {/* Header (no avatar) */}
@@ -60,8 +60,8 @@ const CandidateCard = ({ candidate }) => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex justify-between items-center pt-4 border-t border-border">
+      {/* Footer - Positioned lower */}
+      <div className="absolute bottom-4 left-6 right-6 flex justify-between items-center pt-4 border-t border-border">
         <div className="text-lg font-semibold text-card-foreground">
           ${candidate.salary.toLocaleString()}
           <span className="text-xs text-muted-foreground font-normal">

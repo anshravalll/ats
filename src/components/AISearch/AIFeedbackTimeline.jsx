@@ -378,7 +378,7 @@ const AIFeedbackTimeline = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="text-base font-semibold text-card-foreground">
-                  Query Timeline
+                Query Timeline
               </span>
             </div>
             <div className="flex gap-1">
