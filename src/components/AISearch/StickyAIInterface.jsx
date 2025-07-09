@@ -69,63 +69,115 @@ const StickyAIInterface = () => {
         console.log('Extracted JSON string:', jsonString);
         
         const aiResponse = JSON.parse(jsonString);
-        console.log('✅ PARSED JSON OBJECT:', aiResponse); // ← This will show you what's actually parsed
+        console.log('✅ PARSED JSON OBJECT:', aiResponse);
         
         const filterPlan = aiResponse.filter || { include: [], exclude: [] };
         const rankPlan = aiResponse.rank || { primary: 'years_experience', tie_breakers: [] };
-    
+        
         console.log('🔍 Filter plan:', filterPlan);
         console.log('📊 Rank plan:', rankPlan);
     
         // ACT 1: Filter candidates
         const filteredCandidatesResult = filterCandidates(filterPlan, candidates);
         const filteredIds = filteredCandidatesResult.map(c => c.id);
-    
-        console.log('✅ ACT 1 Complete - Filtered candidates:');
-        console.log('Filtered count:', filteredCandidatesResult.length);
-        console.log('Filtered IDs:', filteredIds);
+        
+        console.log('✅ ACT 1 Complete - Filtered:', filteredCandidatesResult.length);
     
         // ACT 2: Rank candidates
         const rankedCandidates = rankCandidates(filteredIds, rankPlan, candidates);
-    
-        // 🔍 NEW DEBUG LOGS FOR RANKING
-        console.log('✅ ACT 2 Complete - Ranked candidates:');
-        console.log('Ranked count:', rankedCandidates.length);
-        
-        // Show ranked candidates with their ranking field values
-        console.log('📋 RANKED ORDER WITH VALUES:');
-        rankedCandidates.slice(0, 5).forEach((candidate, index) => {
-          console.log(`${index + 1}. ${candidate.name || candidate.id} - ${rankPlan.primary}: ${candidate[rankPlan.primary]}`);
-        });
-    
-        // Show the exact IDs in ranked order
         const rankedIds = rankedCandidates.map(c => c.id);
-        console.log('🎯 RANKED IDs (this is what should go to UI):', rankedIds);
-        console.log('🆚 FILTERED IDs (unranked):', filteredIds);
-        console.log('📊 IDs ORDER COMPARISON:');
-        console.log('Are they the same order?', JSON.stringify(rankedIds) === JSON.stringify(filteredIds));
+        
+        console.log('✅ ACT 2 Complete - Ranked:', rankedCandidates.length);
+        console.log('🎯 Top 3 ranked candidates:', 
+          rankedCandidates.slice(0, 3).map(c => 
+            `${c.name} (${rankPlan.primary}: ${c[rankPlan.primary]})`
+          )
+        );
     
-        // Apply results to UI - THIS IS THE KEY ISSUE
-        console.log('🚨 CALLING applyAIFilters with:', filteredIds); // Current wrong way
+        // Apply results to UI with ranked order
+        console.log('✅ Applying ranked results to UI');
         applyAIFilters(rankedIds, input);
     
-        // 🔍 WHAT SHOULD BE CALLED INSTEAD:
-        console.log('✅ SHOULD CALL applyAIFilters with:', rankedIds);
+        // ACT 3: Generate SPEAK summary with ranked candidates
+        const callSpeakAPI = async () => {
+          try {
+            console.log('🗣️ SPEAK Phase: Generating recruitment summary...');
+            
+            // Take top 5 ranked candidates for summary
+            const topCandidates = rankedCandidates.slice(0, 5);
+            
+            const speakResponse = await fetch('/api/chat/speak', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userQuery: input,
+                topCandidates: topCandidates,
+                filteredCount: rankedCandidates.length,
+                totalCount: candidates.length
+              }),
+            });
+    
+            if (!speakResponse.ok) {
+              throw new Error(`SPEAK API error: ${speakResponse.status}`);
+            }
+    
+            const speakResult = await speakResponse.json();
+            
+            if (speakResult.success) {
+              console.log('✅ SPEAK Phase Complete - Generated summary');
+              
+              // Create the recruitment summary message
+              const summaryMessage = {
+                id: `speak-summary-${Date.now()}`,
+                createdAt: new Date(),
+                role: "assistant",
+                content: speakResult.text,
+                parts: [
+                  {
+                    type: "text",
+                    text: speakResult.text
+                  }
+                ],
+                showTimeStamp: true,
+                animation: "scale"
+              };
+    
+              // Add the summary as the final AI message
+              setMessages(prevMessages => [
+                ...prevMessages,
+                summaryMessage
+              ]);
+              
+              console.log('✅ Recruitment summary added to chat');
+              
+            } else {
+              console.error('❌ SPEAK Phase failed:', speakResult.error);
+            }
+            
+          } catch (error) {
+            console.error('❌ SPEAK API call failed:', error);
+          }
+        };
+    
+        // Call SPEAK API after a small delay to ensure UI updates complete
+        setTimeout(callSpeakAPI, 500);
     
       } catch (error) {
         console.error('Processing error:', error);
       }
-        
-        // Hide assistant messages
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.role === 'assistant' 
-              ? { ...msg, hidden: true } 
-              : msg
-          )
-        );
-      }
-    });
+    
+      // Hide assistant messages (only the original THINK response)
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.role === 'assistant' && !msg.id.includes('speak-summary')
+            ? { ...msg, hidden: true } 
+            : msg
+        )
+      );
+    }
+  }); // ✅ ADDED: Missing closing brace and parenthesis
   
   // Enhanced submit handler that includes CSV data on first request
   const enhancedHandleSubmit = useCallback((e) => {
