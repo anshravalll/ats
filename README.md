@@ -263,7 +263,8 @@ npm run test:coverage
 - Async state transitions  
 - Modal scroll containment  
 - CSV data transformation and types  
-- Dynamic prompt generation  
+- Dynamic prompt generation
+- shadcn chatbot kit compitability issues with useChat (Vercel AI sdk)
 
 ### Code Quality
 
