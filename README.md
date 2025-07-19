@@ -181,7 +181,7 @@ src/
 
 ### CSV Data
 
-- 50 candidates from global regions  
+- 50 candidates from global regions  (pre-built)
 - Normalized skill sets  
 - CSV → JSON using PapaParse  
 
