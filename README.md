@@ -290,4 +290,4 @@ npm run test:coverage
 
 
 Designed and built with purpose.  
-Every click, scroll, and animation — intentional.
+Every click, scroll, and animation — intentional. Thanks.
