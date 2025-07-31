@@ -155,7 +155,7 @@ src/
 ## State Management
 
 - `CandidateContext` + `useReducer`  
-- Pure functions for state transformation  
+- Pure JS functions for state transformation  
 - Async helpers for API requests  
 - No global state pollution  
 
