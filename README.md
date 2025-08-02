@@ -30,7 +30,7 @@ The chat interface is available (expandable), but doesn't dominate the experienc
 
 ---
 
-### UI/UX Architecture Decisions
+### UI/UX Design Decisions
 
 #### Why only 2-color theming?
 
