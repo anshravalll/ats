@@ -285,8 +285,8 @@ npm run test:coverage
 ### Cost-Conscious AI
 
 - GPT-4.1-mini for balance of quality vs. cost  
-- Optimized prompt size and logic  
-- Smart caching to avoid duplicate calls
+- Optimized prompt size and logic
+- Smart caching to avoid duplicate API calls
 
 
 Designed and built with purpose.  
