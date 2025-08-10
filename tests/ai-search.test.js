@@ -64,7 +64,7 @@ describe("AI Search: React dev, Cyprus, sort by experience desc", () => {
     const ranked = rankCandidates(filteredIds, rankPlan, candidates);
     const rankedIds = ranked.map((c) => c.id);
 
-    // Candidate #12 should be before #5
+    // Candidate #12 should be before #5 
     expect(rankedIds.indexOf(12)).toBeLessThan(rankedIds.indexOf(5));
   });
 });
