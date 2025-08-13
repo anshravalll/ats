@@ -274,7 +274,7 @@ npm run test:coverage
 - Pure utility functions  
 - JSDoc comments throughout  
 
-### Design System
+### UI/UX Design System
 
 - Semantic tokens and color palette  
 - Scaled typography and spacing  
