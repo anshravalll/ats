@@ -2,7 +2,6 @@
 
 **AI-Powered Candidate Discovery Platform (for Recruiters)**
 
-**Loom Video:** [Watch Walkthrough](https://www.loom.com/share/fda0a5c1132b4032ae3a496146fb17ec)  
 **Live Demo:** [ats-zeta-six.vercel.app](https://ats-zeta-six.vercel.app/)
 
 ---
