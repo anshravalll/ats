@@ -8,7 +8,7 @@
 
 ## Assignment Objectives
 
-This take-home assignment demonstrates:
+This project assignment demonstrates:
 
 - Clean code architecture with proper separation of concerns  
 - Thoughtful UI/UX design decisions with clear reasoning  
