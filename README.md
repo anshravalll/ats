@@ -6,9 +6,9 @@
 
 ---
 
-## Assignment Objectives
+## Project Objectives
 
-This project assignment demonstrates:
+This project demonstrates:
 
 - Clean code architecture with proper separation of concerns  
 - Thoughtful UI/UX design decisions with clear reasoning  
@@ -254,7 +254,7 @@ npm run test:coverage
 
 ---
 
-## Assignment Completion Notes
+## Project Completion Notes
 
 ### Technical Challenges Solved
 
