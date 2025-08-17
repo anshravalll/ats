@@ -1,6 +1,6 @@
 # ATS-Lite
 
-**AI-Powered Candidate Discovery Platform (for Recruiters)**
+**AI-Powered Candidate Discovery Platform (For Recruiters)**
 
 **Live Demo:** [ats-zeta-six.vercel.app](https://ats-zeta-six.vercel.app/)
 
