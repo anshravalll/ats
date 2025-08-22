@@ -90,7 +90,7 @@ NEXT_PUBLIC_USE_MOCK_API=false
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit [http://localhost:3000] (For local run)(http://localhost:3000) 
 
 ---
 
