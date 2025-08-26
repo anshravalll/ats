@@ -204,7 +204,7 @@ src/
 
 ### Candidate Modal
 
-- Full data view  
+- Full data view  (Prebuilt 50 candidates data)
 - JSON export for collaboration  
 - Responsive, accessible modal  
 
