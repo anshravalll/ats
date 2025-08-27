@@ -268,7 +268,7 @@ npm run test:coverage
 ### Code Quality
 
 - Naming conventions  
-- Error boundaries  
+- Edge cases and error boundaries
 - useMemo/useCallback optimizations  
 - Pure utility functions  
 - JSDoc comments throughout  
