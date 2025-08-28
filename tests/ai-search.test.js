@@ -1,10 +1,10 @@
 import {
-  getAIPlan,
-  filterCandidates,
-  rankCandidates,
+  getAIPlan as fetchAIPlan,
+  filterCandidates as applyFilter,
+  rankCandidates as applyRanking,
 } from "../src/lib/mcp-tools";
 
-describe("AI Search: React dev, Cyprus, sort by experience desc", () => {
+describe("AI Search suite: React devs in Cyprus sorted by experience (desc)", () => {
   const candidates = [
     {
       id: 5,
@@ -24,7 +24,7 @@ describe("AI Search: React dev, Cyprus, sort by experience desc", () => {
       experience: 7,
       years_experience: 7,
     },
-    // Add a distractor candidate
+    // Add a distractor candidate (different role + location)
     {
       id: 8,
       name: "Anna Kowalski",
@@ -37,11 +37,12 @@ describe("AI Search: React dev, Cyprus, sort by experience desc", () => {
   ];
 
   beforeEach(() => {
+    // Reset fetch mock before each test run
     global.fetch = jest.fn();
   });
 
   it("should rank candidate #12 above #5 using AI plan from API", async () => {
-    // Mock the API response for getAIPlan
+    // Mock the API response for fetchAIPlan
     const aiResponse = {
       messages: [
         {
@@ -50,21 +51,22 @@ describe("AI Search: React dev, Cyprus, sort by experience desc", () => {
         },
       ],
     };
+
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => aiResponse,
     });
 
-    const { filterPlan, rankPlan } = await getAIPlan(
-      "React dev, Cyprus, sort by experience desc",
-      candidates,
-    );
-    const filtered = filterCandidates(filterPlan, candidates);
-    const filteredIds = filtered.map((c) => c.id);
-    const ranked = rankCandidates(filteredIds, rankPlan, candidates);
-    const rankedIds = ranked.map((c) => c.id);
+    const prompt = "React dev, Cyprus, sort by experience desc";
+    const { filterPlan, rankPlan } = await fetchAIPlan(prompt, candidates);
 
-    // Candidate #12 should be before #5 
+    const filteredCandidates = applyFilter(filterPlan, candidates);
+    const filteredIds = filteredCandidates.map(({ id }) => id);
+
+    const ranked = applyRanking(filteredIds, rankPlan, candidates);
+    const rankedIds = ranked.map(({ id }) => id);
+
+    // Candidate #12 should be before #5
     expect(rankedIds.indexOf(12)).toBeLessThan(rankedIds.indexOf(5));
   });
 });
