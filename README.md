@@ -23,8 +23,8 @@ This project demonstrates:
 
 ### The Recruiter-First Approach
 
-Why is the AI search bar at the top?  
-This is a recruiter-centric platform, not a chatbot. Recruiters need to find candidates quickly – the AI is a powerful tool, but the primary focus is discovery and filtering.  
+Q. Why is the AI search bar at the top?  
+A. This is a recruiter-centric platform, not a chatbot. Recruiters need to find candidates quickly – the AI is a powerful tool, but the primary focus is discovery and filtering.  
 The chat interface is available (expandable), but doesn't dominate the experience.
 
 ---
